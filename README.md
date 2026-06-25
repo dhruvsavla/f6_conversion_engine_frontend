@@ -1,70 +1,99 @@
-# Getting Started with Create React App
+# F6 Conversion Engine — Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+React frontend for the NCPDP Telecommunications Standard **D.0 → F6** agentic conversion engine. Built for the Hexaware Life Sciences SCION onboarding accelerator.
 
-## Available Scripts
+## What it does
 
-In the project directory, you can run:
+- Paste or drag-and-drop a D.0 transaction, load one of 10 built-in sample scenarios
+- Watches the 8-step backend agent pipeline execute in real time via SSE
+- Shows a side-by-side inline diff of D.0 input vs. F6 output with per-field colour coding
+- Displays validation findings, a filterable audit table, and a live rules library browser
 
-### `npm start`
+## Screenshots
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+```
+Sidebar layout
+├── Convert page
+│   ├── Pipeline stepper (8 live steps)
+│   ├── Side-by-side D.0 / F6 diff panel
+│   ├── Validation findings
+│   ├── Audit summary bar (filter by change type)
+│   └── Audit table (every field decision)
+└── Rules page (live rules library from backend)
+```
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Stack
 
-### `npm test`
+- React 19 (Create React App)
+- React Router v7
+- Fetch + ReadableStream for SSE (POST-based, not EventSource)
+- No UI library — custom CSS design system
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Setup
 
-### `npm run build`
+```bash
+npm install
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Requires the backend running on `http://localhost:8000`. See [f6_conversion_engine_backend](../f6_conversion_engine_backend).
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## Run
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+```bash
+npm start
+```
 
-### `npm run eject`
+Opens at [http://localhost:3000](http://localhost:3000).
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+## Build for production
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+```bash
+npm run build
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## Project structure
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+```
+src/
+  api/
+    client.js          fetch wrapper — convertStream, fetchSample, fetchRulesSummary
+  components/
+    InputPanel.jsx     Textarea, drag-and-drop, sample loader
+    PipelineSteps.jsx  Live 8-step SSE stepper
+    OutputPanel.jsx    Side-by-side D.0 / F6 diff with inline field highlighting
+    AuditSummaryBar.jsx Summary chips (added / transformed / modified / carried / removed)
+    AuditTable.jsx     Filterable field-decision table
+    ValidationFindings.jsx WARN / REJECT findings list
+    DownloadBar.jsx    Download F6 output and change report (JSON)
+    TransactionBadge.jsx Transaction type pill
+    RulesPage.jsx      Live rules library — expandable per-transaction cards
+  styles/
+    global.css         Design system (CSS variables, layout, diff colour classes)
+  App.js               Sidebar shell + routing (Convert / Rules)
+  index.js             React entry point
+```
 
-## Learn More
+## Diff colour coding
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+| Colour | Change type | Meaning |
+|--------|------------|---------|
+| Green | added | New F6 field, no D.0 equivalent |
+| Amber | transformed | Value changed by a named transform (e.g. BIN → IIN pad) |
+| Purple | modified | Same field, expanded code set in F6 |
+| Red strikethrough | removed | D.0 field deprecated in F6 |
+| Grey | carried | Passed through unchanged |
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Sample scenarios
 
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+| Scenario | Transaction code | Key features |
+|----------|-----------------|--------------|
+| Retail pharmacy claim | B1 | Baseline case, all core segments |
+| Specialty / high cost therapy | B1 | High-cost drug, REMS and SP indicator |
+| Controlled substance | B1 | DUR segment, prescriber traceability |
+| Coordination of benefits | B1 + COB | Legacy BIN removed, COB restructured |
+| Claim reversal | B2 | Key fields only, no new F6 fields added |
+| Compound prescription | B1 + CMP | CMP segment, expanded ingredient handling |
+| Long-term care | B1 | Patient residence, FAC segment |
+| Medicare Part D | B1 | Group ID prefix detection |
+| Eligibility verification | E1 | Minimal HDR / INS / PAT |
+| Prior authorization | PA | PA segment |
