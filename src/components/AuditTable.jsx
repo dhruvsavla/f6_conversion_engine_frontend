@@ -11,6 +11,12 @@ const CHANGE_COLOR = {
   missing: { bg: "var(--warning-light)", color: "var(--warning)" },
 };
 
+const SUP_CHARS = ["", "¹", "²", "³", "⁴", "⁵", "⁶", "⁷", "⁸", "⁹"];
+
+function occSup(n) {
+  return n > 1 ? (SUP_CHARS[n] || `^${n}`) : "";
+}
+
 function ChangeBadge({ type }) {
   const c = CHANGE_COLOR[type] || CHANGE_COLOR.carried;
   return (
@@ -34,10 +40,10 @@ function MonoCell({ children, dim }) {
   );
 }
 
-function ExpandedRow({ entry }) {
+function ExpandedRow({ entry, showConditions }) {
   return (
     <tr>
-      <td colSpan={8} style={{ padding: 0 }}>
+      <td colSpan={showConditions ? 9 : 8} style={{ padding: 0 }}>
         <div
           style={{
             background: "#f8fafc",
@@ -67,8 +73,23 @@ function ExpandedRow({ entry }) {
             <div style={{ fontSize: 10, color: "var(--text-secondary)", fontWeight: 600, marginBottom: 2 }}>
               SEGMENT
             </div>
-            <code style={{ fontSize: 12, fontFamily: "var(--mono)" }}>{entry.segment}</code>
+            <code style={{ fontSize: 12, fontFamily: "var(--mono)" }}>
+              {entry.segment}{entry.occurrence > 1 ? occSup(entry.occurrence) : ""}
+            </code>
           </div>
+          {entry.condition_evaluated && (
+            <div>
+              <div style={{ fontSize: 10, color: "var(--text-secondary)", fontWeight: 600, marginBottom: 2 }}>
+                CONDITION
+              </div>
+              <code style={{ fontSize: 12, fontFamily: "var(--mono)", color: entry.condition_result ? "var(--success)" : "var(--error)" }}>
+                {entry.condition_expression || "—"}
+              </code>
+              <span style={{ marginLeft: 6, fontSize: 10, color: entry.condition_result ? "var(--success)" : "var(--error)" }}>
+                {entry.condition_result ? "✓ passed" : "✗ skipped"}
+              </span>
+            </div>
+          )}
         </div>
       </td>
     </tr>
@@ -80,6 +101,7 @@ export default function AuditTable({ entries, segmentFilter, changeTypeFilter })
   const [localSegFilter, setLocalSegFilter] = useState("ALL");
   const [localTypeFilter, setLocalTypeFilter] = useState("ALL");
   const [expandedRow, setExpandedRow] = useState(null);
+  const [showConditions, setShowConditions] = useState(false);
   const parentRef = useRef();
 
   const effectiveSegFilter = segmentFilter || localSegFilter;
@@ -89,6 +111,11 @@ export default function AuditTable({ entries, segmentFilter, changeTypeFilter })
     const s = new Set(entries.map(e => e.segment));
     return ["ALL", ...Array.from(s).sort()];
   }, [entries]);
+
+  const hasConditions = useMemo(
+    () => entries.some(e => e.condition_evaluated),
+    [entries]
+  );
 
   const changeTypes = ["ALL", "carried", "transformed", "added", "removed", "modified", "missing"];
 
@@ -144,6 +171,7 @@ export default function AuditTable({ entries, segmentFilter, changeTypeFilter })
 
   function renderRow(entry, i, isExpanded) {
     const bg = i % 2 === 0 ? "var(--surface)" : "#fafafa";
+    const sup = occSup(entry.occurrence || 1);
     return (
       <>
         <tr
@@ -158,7 +186,10 @@ export default function AuditTable({ entries, segmentFilter, changeTypeFilter })
           onMouseLeave={e => !isExpanded && (e.currentTarget.style.background = bg)}
         >
           <td style={colStyle}>
-            <code style={{ fontFamily: "var(--mono)", fontSize: 11, fontWeight: 600 }}>{entry.segment}</code>
+            <code style={{ fontFamily: "var(--mono)", fontSize: 11, fontWeight: 600 }}>
+              {entry.segment}
+              {sup && <span style={{ fontSize: 9, verticalAlign: "super", marginLeft: 1 }}>{sup}</span>}
+            </code>
           </td>
           <td style={colStyle}><MonoCell>{entry.from_field_id || "—"}</MonoCell></td>
           <td style={{ ...colStyle, color: "var(--text-secondary)", fontSize: 14 }}>→</td>
@@ -173,8 +204,19 @@ export default function AuditTable({ entries, segmentFilter, changeTypeFilter })
           <td style={{ ...colStyle, maxWidth: 130, overflow: "hidden", textOverflow: "ellipsis" }}>
             <MonoCell>{entry.new_value || <span style={{ opacity: 0.35 }}>—</span>}</MonoCell>
           </td>
+          {showConditions && (
+            <td style={{ ...colStyle, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis" }}>
+              {entry.condition_evaluated ? (
+                <span style={{ fontSize: 10, color: entry.condition_result ? "var(--success)" : "var(--text-secondary)", fontFamily: "var(--mono)" }}>
+                  {entry.condition_result ? "✓ " : "✗ "}{entry.condition_expression}
+                </span>
+              ) : (
+                <span style={{ opacity: 0.3, fontSize: 10 }}>—</span>
+              )}
+            </td>
+          )}
         </tr>
-        {isExpanded && <ExpandedRow key={`exp-${i}`} entry={entry} />}
+        {isExpanded && <ExpandedRow key={`exp-${i}`} entry={entry} showConditions={showConditions} />}
       </>
     );
   }
@@ -240,6 +282,23 @@ export default function AuditTable({ entries, segmentFilter, changeTypeFilter })
             width: 200,
           }}
         />
+        {hasConditions && (
+          <button
+            onClick={() => setShowConditions(v => !v)}
+            style={{
+              padding: "5px 10px",
+              borderRadius: "var(--radius-sm)",
+              border: `1px solid ${showConditions ? "var(--accent)" : "var(--border)"}`,
+              fontSize: 11,
+              fontFamily: "var(--sans)",
+              background: showConditions ? "var(--accent-light)" : "var(--surface)",
+              color: showConditions ? "var(--accent)" : "var(--text-secondary)",
+              cursor: "pointer",
+            }}
+          >
+            {showConditions ? "Hide conditions" : "Show conditions"}
+          </button>
+        )}
         <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--text-secondary)" }}>
           {filtered.length.toLocaleString()} rows
         </span>
@@ -261,6 +320,7 @@ export default function AuditTable({ entries, segmentFilter, changeTypeFilter })
               <th style={thStyle}>Change</th>
               <th style={thStyle}>Old Value</th>
               <th style={thStyle}>New Value</th>
+              {showConditions && <th style={thStyle}>Condition</th>}
             </tr>
           </thead>
           <tbody>
@@ -275,7 +335,7 @@ export default function AuditTable({ entries, segmentFilter, changeTypeFilter })
             )}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={8} style={{ textAlign: "center", padding: 32, color: "var(--text-secondary)", fontSize: 13 }}>
+                <td colSpan={showConditions ? 9 : 8} style={{ textAlign: "center", padding: 32, color: "var(--text-secondary)", fontSize: 13 }}>
                   No entries match the current filter.
                 </td>
               </tr>

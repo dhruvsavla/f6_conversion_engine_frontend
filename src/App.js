@@ -12,7 +12,7 @@ import DownloadBar from "./components/DownloadBar";
 import TransactionBadge from "./components/TransactionBadge";
 import RulesPage from "./components/RulesPage";
 
-import { convertStream, fetchSample } from "./api/client";
+import { convertStream, convertHexStream, fetchSample } from "./api/client";
 
 // ── Sidebar navigation ──────────────────────────────────────
 function Sidebar({ rulesLoaded }) {
@@ -68,6 +68,24 @@ function ConverterPage() {
   const [error, setError] = useState(null);
   const [changeTypeFilter, setChangeTypeFilter] = useState(null);
 
+  function _streamCallbacks(fileName) {
+    return {
+      onStep: (stepData) => {
+        setSteps(prev => {
+          const idx = prev.findIndex(s => s.id === stepData.id);
+          if (idx >= 0) {
+            const next = [...prev];
+            next[idx] = stepData;
+            return next;
+          }
+          return [...prev, stepData];
+        });
+      },
+      onResult: (data) => setResult(data),
+      onError: (msg) => setError(msg),
+    };
+  }
+
   async function handleConvert(d0Text) {
     setError(null);
     setResult(null);
@@ -76,21 +94,23 @@ function ConverterPage() {
     setIsConverting(true);
 
     try {
-      await convertStream(d0Text, {
-        onStep: (stepData) => {
-          setSteps(prev => {
-            const idx = prev.findIndex(s => s.id === stepData.id);
-            if (idx >= 0) {
-              const next = [...prev];
-              next[idx] = stepData;
-              return next;
-            }
-            return [...prev, stepData];
-          });
-        },
-        onResult: (data) => setResult(data),
-        onError: (msg) => setError(msg),
-      });
+      await convertStream(d0Text, _streamCallbacks());
+    } catch (e) {
+      setError(e.message || "Conversion failed. Is the backend running on port 8000?");
+    } finally {
+      setIsConverting(false);
+    }
+  }
+
+  async function handleConvertHex(rawBytes, fileName) {
+    setError(null);
+    setResult(null);
+    setSteps([]);
+    setChangeTypeFilter(null);
+    setIsConverting(true);
+
+    try {
+      await convertHexStream(rawBytes, _streamCallbacks(fileName));
     } catch (e) {
       setError(e.message || "Conversion failed. Is the backend running on port 8000?");
     } finally {
@@ -123,6 +143,7 @@ function ConverterPage() {
       {!result && !isConverting && (
         <InputPanel
           onConvert={handleConvert}
+          onConvertHex={handleConvertHex}
           onLoadSample={handleLoadSample}
           converting={isConverting}
         />

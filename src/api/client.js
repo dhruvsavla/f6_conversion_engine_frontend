@@ -17,6 +17,29 @@ export async function convertStream(d0Text, { onStep, onResult, onError } = {}) 
     throw new Error(body.detail || `HTTP ${response.status}`);
   }
 
+  return _readSSE(response, { onStep, onResult, onError });
+}
+
+/**
+ * Stream a binary NCPDP hex file conversion via SSE.
+ * rawBytes should be an ArrayBuffer or Uint8Array from a FileReader.
+ */
+export async function convertHexStream(rawBytes, { onStep, onResult, onError } = {}) {
+  const response = await fetch(`${BASE}/api/convert/hex/stream`, {
+    method: "POST",
+    headers: { "Content-Type": "application/octet-stream" },
+    body: rawBytes,
+  });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body.detail || `HTTP ${response.status}`);
+  }
+
+  return _readSSE(response, { onStep, onResult, onError });
+}
+
+async function _readSSE(response, { onStep, onResult, onError } = {}) {
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
