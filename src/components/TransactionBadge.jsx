@@ -12,16 +12,16 @@ const TX_LABELS = {
 };
 
 const TX_COLORS = {
-  RETAIL: "#057a55",
-  SPECIALTY: "#6b21a8",
-  COB: "#1e40af",
-  CONTROLLED: "#c27803",
-  REVERSAL: "#c81e1e",
-  COMPOUND: "#0891b2",
-  LTC: "#7c3aed",
-  MEDICARE_PART_D: "#1d4ed8",
-  ELIGIBILITY: "#15803d",
-  PRIOR_AUTH: "#9333ea",
+  RETAIL:         "#34D399",   // emerald
+  SPECIALTY:      "#A78BFA",   // violet
+  COB:            "#60A5FA",   // sky blue
+  CONTROLLED:     "#FBBF24",   // amber
+  REVERSAL:       "#FB7185",   // rose
+  COMPOUND:       "#22D3EE",   // cyan
+  LTC:            "#C084FC",   // purple
+  MEDICARE_PART_D:"#6366F1",   // indigo
+  ELIGIBILITY:    "#4ADE80",   // green
+  PRIOR_AUTH:     "#F472B6",   // pink
 };
 
 export default function TransactionBadge({ type }) {

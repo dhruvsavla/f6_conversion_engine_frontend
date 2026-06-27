@@ -46,7 +46,7 @@ function ExpandedRow({ entry, showConditions }) {
       <td colSpan={showConditions ? 9 : 8} style={{ padding: 0 }}>
         <div
           style={{
-            background: "#f8fafc",
+            background: "var(--bg-elevated)",
             borderTop: "1px solid var(--border)",
             borderBottom: "1px solid var(--border)",
             padding: "12px 24px",
@@ -160,7 +160,7 @@ export default function AuditTable({ entries, segmentFilter, changeTypeFilter })
     ...colStyle,
     fontWeight: 600,
     fontSize: 11,
-    background: "#f9fafb",
+    background: "var(--bg-elevated)",
     color: "var(--text-secondary)",
     textTransform: "uppercase",
     letterSpacing: "0.04em",
@@ -170,7 +170,7 @@ export default function AuditTable({ entries, segmentFilter, changeTypeFilter })
   };
 
   function renderRow(entry, i, isExpanded) {
-    const bg = i % 2 === 0 ? "var(--surface)" : "#fafafa";
+    const bg = i % 2 === 0 ? "var(--bg-surface)" : "var(--bg-elevated)";
     const sup = occSup(entry.occurrence || 1);
     return (
       <>
@@ -182,7 +182,7 @@ export default function AuditTable({ entries, segmentFilter, changeTypeFilter })
             cursor: "pointer",
             transition: "background .1s",
           }}
-          onMouseEnter={e => !isExpanded && (e.currentTarget.style.background = "#f0f4f9")}
+          onMouseEnter={e => !isExpanded && (e.currentTarget.style.background = "rgba(99,102,241,.07)")}
           onMouseLeave={e => !isExpanded && (e.currentTarget.style.background = bg)}
         >
           <td style={colStyle}>
@@ -232,7 +232,7 @@ export default function AuditTable({ entries, segmentFilter, changeTypeFilter })
           alignItems: "center",
           padding: "10px 14px",
           borderBottom: "1px solid var(--border)",
-          background: "#fafafa",
+          background: "var(--bg-elevated)",
         }}
       >
         {!segmentFilter && (
@@ -245,7 +245,8 @@ export default function AuditTable({ entries, segmentFilter, changeTypeFilter })
               border: "1px solid var(--border)",
               fontSize: 12,
               fontFamily: "var(--sans)",
-              background: "var(--surface)",
+              background: "var(--bg-surface)",
+              color: "var(--text)",
             }}
           >
             {segments.map(s => <option key={s} value={s}>{s === "ALL" ? "Segment: ALL" : s}</option>)}
@@ -261,7 +262,8 @@ export default function AuditTable({ entries, segmentFilter, changeTypeFilter })
               border: "1px solid var(--border)",
               fontSize: 12,
               fontFamily: "var(--sans)",
-              background: "var(--surface)",
+              background: "var(--bg-surface)",
+              color: "var(--text)",
             }}
           >
             {changeTypes.map(t => <option key={t} value={t}>{t === "ALL" ? "Change type: ALL" : t}</option>)}

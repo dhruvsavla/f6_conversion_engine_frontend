@@ -40,7 +40,7 @@ export default function PipelineSteps({ steps = [], isRunning }) {
                     fontWeight: 700, fontSize: 11, marginBottom: 4,
                     transition: "background .3s",
                     animation: isRunningNow ? "stepPulse 1.2s ease-in-out infinite" : "none",
-                    boxShadow: isRunningNow ? "0 0 0 3px #2563eb33" : "none",
+                    boxShadow: isRunningNow ? "0 0 0 3px rgba(99,102,241,.30)" : "none",
                   }}
                 >
                   {icon}
@@ -56,7 +56,7 @@ export default function PipelineSteps({ steps = [], isRunning }) {
           );
         })}
       </div>
-      <style>{`@keyframes stepPulse { 0%,100%{box-shadow:0 0 0 3px #2563eb22} 50%{box-shadow:0 0 0 6px #2563eb11} }`}</style>
+      <style>{`@keyframes stepPulse { 0%,100%{box-shadow:0 0 0 3px rgba(99,102,241,.28)} 50%{box-shadow:0 0 0 7px rgba(99,102,241,.10)} }`}</style>
     </div>
   );
 }

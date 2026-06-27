@@ -58,7 +58,7 @@ export default function ValidationFindings({ findings }) {
               padding: "10px 18px",
               borderLeft: `3px solid ${f.severity === "ERROR" ? "var(--error)" : "var(--warning)"}`,
               borderBottom: i < findings.length - 1 ? "1px solid var(--border)" : "none",
-              background: f.severity === "ERROR" ? "var(--error-light)" : "#fffbf0",
+              background: f.severity === "ERROR" ? "var(--error-light)" : "var(--warning-light)",
             }}
           >
             <span
@@ -77,8 +77,8 @@ export default function ValidationFindings({ findings }) {
               style={{
                 fontSize: 11,
                 padding: "1px 6px",
-                background: "#fff",
-                border: "1px solid var(--border)",
+                background: "var(--bg-elevated)",
+                border: "1px solid var(--border-bright)",
                 borderRadius: 3,
                 flexShrink: 0,
                 color: "var(--text)",

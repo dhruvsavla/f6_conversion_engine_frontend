@@ -10,9 +10,18 @@ import AuditSummaryBar from "./components/AuditSummaryBar";
 import AuditTable from "./components/AuditTable";
 import DownloadBar from "./components/DownloadBar";
 import TransactionBadge from "./components/TransactionBadge";
-import RulesPage from "./components/RulesPage";
+import IngestionPage from "./components/IngestionPage";
+import BatchUpload from "./components/BatchUpload";
 
-import { convertStream, convertHexStream, fetchSample } from "./api/client";
+import HistoryPage from "./pages/HistoryPage";
+import ConversionDetailPage from "./pages/ConversionDetailPage";
+import BatchesPage from "./pages/BatchesPage";
+import RulesPage from "./pages/RulesPage";
+import ReverseConverterPage from "./pages/ReverseConverterPage";
+import ValidatorPage from "./pages/ValidatorPage";
+
+import { convertBatch, convertStream, convertHexStream, fetchSample } from "./api/client";
+import BatchProgress from "./components/BatchProgress";
 
 // ── Sidebar navigation ──────────────────────────────────────
 function Sidebar({ rulesLoaded }) {
@@ -21,8 +30,13 @@ function Sidebar({ rulesLoaded }) {
   const current = location.pathname;
 
   const items = [
-    { path: "/", label: "Convert", icon: "⇌" },
-    { path: "/rules", label: "Rules", icon: "⚙" },
+    { path: "/",         label: "D.0 → F6",  icon: "⇌" },
+    { path: "/reverse",  label: "F6 → D.0",  icon: "⇄" },
+    { path: "/validate", label: "Validate",  icon: "✓" },
+    { path: "/history",  label: "History",   icon: "◷" },
+    { path: "/batches",  label: "Batches",   icon: "⊞" },
+    { path: "/rules",    label: "Rules",     icon: "⚙" },
+    { path: "/ingest",   label: "Ingest",    icon: "↑" },
   ];
 
   return (
@@ -62,11 +76,14 @@ function Sidebar({ rulesLoaded }) {
 
 // ── Converter page ──────────────────────────────────────────
 function ConverterPage() {
+  const navigate = useNavigate();
   const [steps, setSteps] = useState([]);
   const [result, setResult] = useState(null);
+  const [conversionId, setConversionId] = useState(null);
   const [isConverting, setIsConverting] = useState(false);
   const [error, setError] = useState(null);
   const [changeTypeFilter, setChangeTypeFilter] = useState(null);
+  const [batchJobId, setBatchJobId] = useState(null);  // null = no active batch
 
   function _streamCallbacks(fileName) {
     return {
@@ -81,7 +98,10 @@ function ConverterPage() {
           return [...prev, stepData];
         });
       },
-      onResult: (data) => setResult(data),
+      onResult: (data) => {
+        setResult(data);
+        if (data.conversion_id) setConversionId(data.conversion_id);
+      },
       onError: (msg) => setError(msg),
     };
   }
@@ -118,6 +138,17 @@ function ConverterPage() {
     }
   }
 
+  async function handleBatch(text) {
+    setError(null);
+    setBatchJobId(null);
+    try {
+      const jobId = await convertBatch(text);
+      setBatchJobId(jobId);
+    } catch (e) {
+      setError(e.message || "Failed to submit batch.");
+    }
+  }
+
   async function handleLoadSample(type, setText) {
     try {
       const text = await fetchSample(type);
@@ -132,6 +163,8 @@ function ConverterPage() {
     setSteps([]);
     setError(null);
     setChangeTypeFilter(null);
+    setBatchJobId(null);
+    setConversionId(null);
   }
 
   const showPipeline = steps.length > 0 || isConverting;
@@ -141,11 +174,23 @@ function ConverterPage() {
       {showPipeline && <PipelineSteps steps={steps} isRunning={isConverting} />}
 
       {!result && !isConverting && (
-        <InputPanel
-          onConvert={handleConvert}
-          onConvertHex={handleConvertHex}
-          onLoadSample={handleLoadSample}
-          converting={isConverting}
+        <>
+          <InputPanel
+            onConvert={handleConvert}
+            onConvertHex={handleConvertHex}
+            onBatch={handleBatch}
+            onLoadSample={handleLoadSample}
+            converting={isConverting}
+          />
+          <BatchUpload />
+        </>
+      )}
+
+      {/* Batch progress bar — shown above the output panel whenever a batch is active */}
+      {batchJobId && (
+        <BatchProgress
+          jobId={batchJobId}
+          onDone={() => {}}
         />
       )}
 
@@ -171,8 +216,19 @@ function ConverterPage() {
               ← New conversion
             </button>
             <TransactionBadge type={result.transaction_type} />
-            <div style={{ marginLeft: "auto", fontSize: 12, color: "var(--text-secondary)" }}>
-              {result.audit.entries.length} fields audited
+            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
+              {conversionId && (
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => navigate(`/history/${conversionId}`)}
+                  style={{ fontSize: 12 }}
+                >
+                  View in History →
+                </button>
+              )}
+              <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>
+                {result.audit.entries.length} fields audited
+              </span>
             </div>
           </div>
 
@@ -217,15 +273,6 @@ function ConverterPage() {
   );
 }
 
-// ── Rules page wrapper ──────────────────────────────────────
-function RulesPageWrapper() {
-  return (
-    <div className="main-content">
-      <RulesPage />
-    </div>
-  );
-}
-
 // ── Root app with sidebar layout ────────────────────────────
 export default function App() {
   return (
@@ -233,8 +280,14 @@ export default function App() {
       <div className="app-shell">
         <SidebarWithLocation />
         <Routes>
-          <Route path="/" element={<ConverterPage />} />
-          <Route path="/rules" element={<RulesPageWrapper />} />
+          <Route path="/"            element={<ConverterPage />} />
+          <Route path="/reverse"    element={<ReverseConverterPage />} />
+          <Route path="/validate"   element={<ValidatorPage />} />
+          <Route path="/history"    element={<div className="main-content"><HistoryPage /></div>} />
+          <Route path="/history/:id" element={<div className="main-content"><ConversionDetailPage /></div>} />
+          <Route path="/batches"    element={<div className="main-content"><BatchesPage /></div>} />
+          <Route path="/rules"      element={<div className="main-content"><RulesPage /></div>} />
+          <Route path="/ingest"     element={<div className="main-content"><IngestionPage /></div>} />
         </Routes>
       </div>
     </BrowserRouter>

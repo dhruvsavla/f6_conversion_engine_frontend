@@ -26,7 +26,7 @@ function decodeHexPreview(buffer) {
   return text.replace(/\x1e/g, "\n").replace(/\x1c/g, "|").replace(/\x1d/g, "=");
 }
 
-export default function InputPanel({ onConvert, onConvertHex, onLoadSample, converting }) {
+export default function InputPanel({ onConvert, onConvertHex, onBatch, onLoadSample, converting }) {
   const [text, setText] = useState("");
   const [hexMeta, setHexMeta] = useState(null);   // {name, size, bytes: ArrayBuffer}
   const [showPreview, setShowPreview] = useState(false);
@@ -66,6 +66,8 @@ export default function InputPanel({ onConvert, onConvertHex, onLoadSample, conv
 
   const isHexMode = hexMeta !== null;
   const canConvert = !converting && (text.trim().length > 0 || isHexMode);
+  // Batch only makes sense for pipe-format text (not binary hex streams)
+  const canBatch = !converting && !isHexMode && text.trim().length > 0;
 
   function handleConvertClick() {
     if (!canConvert) return;
@@ -79,7 +81,7 @@ export default function InputPanel({ onConvert, onConvertHex, onLoadSample, conv
   return (
     <div style={{ maxWidth: 860, margin: "0 auto", padding: "40px 24px" }}>
       <div style={{ marginBottom: 32 }}>
-        <h1 style={{ fontSize: 26, fontWeight: 700, letterSpacing: "-.02em", marginBottom: 8 }}>
+        <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: "-.03em", marginBottom: 8, background: "linear-gradient(135deg, #F1F5F9 30%, #818CF8 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
           NCPDP D.0 → F6 Converter
         </h1>
         <p style={{ color: "var(--text-secondary)", fontSize: 14, lineHeight: 1.6, maxWidth: 580 }}>
@@ -118,30 +120,29 @@ export default function InputPanel({ onConvert, onConvertHex, onLoadSample, conv
                 alignItems: "center",
                 gap: 12,
                 padding: "12px 16px",
-                background: "#0f2240",
-                border: "1.5px solid #3b82f6",
+                background: "var(--accent-light)",
+                border: "1.5px solid var(--accent-border)",
                 borderRadius: "var(--radius)",
-                marginBottom: showPreview ? 0 : 0,
                 borderBottomLeftRadius: showPreview ? 0 : undefined,
                 borderBottomRightRadius: showPreview ? 0 : undefined,
               }}
             >
               <span style={{ fontSize: 18 }}>⬡</span>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "#93c5fd" }}>Binary hex format detected</div>
-                <div style={{ fontSize: 11, color: "rgba(147,197,253,.7)", fontFamily: "var(--mono)" }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--cyan)" }}>Binary hex format detected</div>
+                <div style={{ fontSize: 11, color: "rgba(34,211,238,.6)", fontFamily: "var(--mono)" }}>
                   {hexMeta.name} · {hexMeta.size.toLocaleString()} bytes
                 </div>
               </div>
               <button
                 onClick={() => setShowPreview(v => !v)}
-                style={{ fontSize: 11, background: "rgba(59,130,246,.2)", border: "1px solid rgba(59,130,246,.4)", borderRadius: "var(--radius-sm)", padding: "4px 10px", cursor: "pointer", color: "#93c5fd" }}
+                style={{ fontSize: 11, background: "rgba(99,102,241,.18)", border: "1px solid var(--accent-border)", borderRadius: "var(--radius-sm)", padding: "4px 10px", cursor: "pointer", color: "var(--cyan)" }}
               >
                 {showPreview ? "Hide preview" : "Preview decoded"}
               </button>
               <button
                 onClick={clearAll}
-                style={{ fontSize: 11, background: "rgba(255,255,255,.08)", border: "none", borderRadius: 4, padding: "4px 10px", color: "rgba(255,255,255,.5)", cursor: "pointer" }}
+                style={{ fontSize: 11, background: "rgba(255,255,255,.06)", border: "none", borderRadius: 4, padding: "4px 10px", color: "rgba(255,255,255,.4)", cursor: "pointer" }}
               >
                 clear
               </button>
@@ -151,13 +152,13 @@ export default function InputPanel({ onConvert, onConvertHex, onLoadSample, conv
                 style={{
                   margin: 0,
                   padding: "12px 16px",
-                  background: "#0a1929",
-                  border: "1.5px solid #3b82f6",
-                  borderTop: "1px solid rgba(59,130,246,.3)",
+                  background: "var(--bg-code)",
+                  border: "1.5px solid var(--accent-border)",
+                  borderTop: "1px solid rgba(99,102,241,.2)",
                   borderRadius: "0 0 var(--radius) var(--radius)",
                   fontFamily: "var(--mono)",
                   fontSize: 11,
-                  color: "#93c5fd",
+                  color: "var(--cyan)",
                   maxHeight: 200,
                   overflowY: "auto",
                   whiteSpace: "pre-wrap",
@@ -188,7 +189,7 @@ export default function InputPanel({ onConvert, onConvertHex, onLoadSample, conv
                 fontFamily: "var(--mono)",
                 fontSize: 12,
                 lineHeight: 1.7,
-                background: dragging ? "#1a2d44" : "var(--bg-code)",
+                background: dragging ? "rgba(99,102,241,.08)" : "var(--bg-code)",
                 color: "var(--text-code)",
                 border: `1.5px solid ${dragging ? "var(--accent)" : "rgba(255,255,255,.08)"}`,
                 borderRadius: "var(--radius)",
@@ -196,7 +197,7 @@ export default function InputPanel({ onConvert, onConvertHex, onLoadSample, conv
                 outline: "none",
                 transition: "border-color .2s",
               }}
-              onFocus={e => { e.target.style.borderColor = "rgba(59,130,246,.5)"; }}
+              onFocus={e => { e.target.style.borderColor = "rgba(99,102,241,.5)"; }}
               onBlur={e => { e.target.style.borderColor = "rgba(255,255,255,.08)"; }}
             />
             {text && (
@@ -233,6 +234,17 @@ export default function InputPanel({ onConvert, onConvertHex, onLoadSample, conv
           {converting ? (
             <><span style={{ display: "inline-block", animation: "spin 1s linear infinite" }}>⟳</span> Converting…</>
           ) : "Convert to F6 →"}
+        </button>
+
+        {/* Batch button — pipe mode only; disabled for hex streams */}
+        <button
+          className="btn btn-secondary"
+          onClick={() => canBatch && onBatch && onBatch(text)}
+          disabled={!canBatch}
+          title="Process as multi-claim batch (claims separated by blank lines)"
+          style={{ padding: "10px 20px", fontSize: 14 }}
+        >
+          Process as Batch
         </button>
 
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>

@@ -86,19 +86,19 @@ export default function OutputPanel({ d0Input, f6Output, auditEntries }) {
 
   return (
     <div className="card" style={{ overflow: "hidden" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", borderBottom: "1px solid var(--border)", background: "#fafafa" }}>
-        <span style={{ fontWeight: 600, fontSize: 13 }}>D.0 → F6 Output</span>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", borderBottom: "1px solid var(--border)", background: "var(--bg-elevated)" }}>
+        <span style={{ fontWeight: 600, fontSize: 13, color: "var(--text-primary)" }}>D.0 → F6 Output</span>
         <button onClick={copyF6} className="btn btn-secondary" style={{ fontSize: 12, padding: "4px 12px" }}>
           {copied ? "✓ Copied" : "Copy F6"}
         </button>
       </div>
       <div style={{ display: "flex", borderTop: "1px solid var(--border)" }}>
-        <CodePane title="D.0 Input" content={d0Input} accent="#ef4444" />
+        <CodePane title="D.0 Input" content={d0Input} accent="var(--error)" />
         <div style={{ width: 1, background: "var(--border)", flexShrink: 0 }} />
-        <CodePane title="F6 Output" content={f6Output} accent="#10b981" auditIndex={auditIndex} />
+        <CodePane title="F6 Output" content={f6Output} accent="var(--success)" auditIndex={auditIndex} />
       </div>
       {/* Legend */}
-      <div style={{ padding: "8px 16px", borderTop: "1px solid var(--border)", display: "flex", gap: 16, flexWrap: "wrap", background: "#fafafa" }}>
+      <div style={{ padding: "8px 16px", borderTop: "1px solid var(--border)", display: "flex", gap: 16, flexWrap: "wrap", background: "var(--bg-elevated)" }}>
         {[
           { cls: "field-added", label: "added" },
           { cls: "field-transformed", label: "transformed" },
