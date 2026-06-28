@@ -1,9 +1,10 @@
-import { useState } from "react";
-import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import "./styles/global.css";
 
+// Components
 import InputPanel from "./components/InputPanel";
-import PipelineSteps from "./components/PipelineSteps";
+import PipelineCircuit from "./components/PipelineCircuit";
 import OutputPanel from "./components/OutputPanel";
 import ValidationFindings from "./components/ValidationFindings";
 import AuditSummaryBar from "./components/AuditSummaryBar";
@@ -12,7 +13,15 @@ import DownloadBar from "./components/DownloadBar";
 import TransactionBadge from "./components/TransactionBadge";
 import IngestionPage from "./components/IngestionPage";
 import BatchUpload from "./components/BatchUpload";
+import BatchProgress from "./components/BatchProgress";
+import PageHeader from "./components/PageHeader";
+import { ToastProvider } from "./components/Toast";
+import {
+  IconConvert, IconValidate, IconHistory, IconBatch,
+  IconRules, IconIngest, IconReverse, IconArrowRight, IconDatabase
+} from "./components/Icons";
 
+// Pages
 import HistoryPage from "./pages/HistoryPage";
 import ConversionDetailPage from "./pages/ConversionDetailPage";
 import BatchesPage from "./pages/BatchesPage";
@@ -20,61 +29,194 @@ import RulesPage from "./pages/RulesPage";
 import ReverseConverterPage from "./pages/ReverseConverterPage";
 import ValidatorPage from "./pages/ValidatorPage";
 
-import { convertBatch, convertStream, convertHexStream, fetchSample } from "./api/client";
-import BatchProgress from "./components/BatchProgress";
+// API
+import { convertBatch, convertStream, convertHexStream, fetchSample, fetchStats } from "./api/client";
 
-// ── Sidebar navigation ──────────────────────────────────────
-function Sidebar({ rulesLoaded }) {
-  const navigate = useNavigate();
+// ── Nav items ──────────────────────────────────────────────────
+const NAV_ITEMS = [
+  { to: "/",         label: "Convert",   Icon: IconConvert  },
+  { to: "/reverse",  label: "Reverse",   Icon: IconReverse  },
+  { to: "/validate", label: "Validate",  Icon: IconValidate },
+  { to: "/history",  label: "History",   Icon: IconHistory  },
+  { to: "/batches",  label: "Batches",   Icon: IconBatch    },
+  { to: "/rules",    label: "Rules",     Icon: IconRules    },
+  { to: "/ingest",   label: "Ingest",    Icon: IconIngest   },
+];
+
+// ── Command rail sidebar ───────────────────────────────────────
+function Sidebar({ expanded, onExpand, onCollapse }) {
+  const [stats, setStats] = useState(null);
   const location = useLocation();
-  const current = location.pathname;
+  const navigate = useNavigate();
 
-  const items = [
-    { path: "/",         label: "D.0 → F6",  icon: "⇌" },
-    { path: "/reverse",  label: "F6 → D.0",  icon: "⇄" },
-    { path: "/validate", label: "Validate",  icon: "✓" },
-    { path: "/history",  label: "History",   icon: "◷" },
-    { path: "/batches",  label: "Batches",   icon: "⊞" },
-    { path: "/rules",    label: "Rules",     icon: "⚙" },
-    { path: "/ingest",   label: "Ingest",    icon: "↑" },
-  ];
+  useEffect(() => {
+    fetchStats().then(s => setStats(s)).catch(() => {});
+  }, []);
 
   return (
-    <aside className="sidebar">
-      <div className="sidebar-brand">
-        <div className="sidebar-logo">Rx</div>
-        <div>
-          <div className="sidebar-brand-text">D.0 → F6</div>
-          <div className="sidebar-brand-sub">NCPDP Converter</div>
+    <nav
+      onMouseEnter={onExpand}
+      onMouseLeave={onCollapse}
+      style={{
+        width: expanded ? "var(--rail-expanded)" : "var(--rail-collapsed)",
+        transition: "width var(--transition-slow)",
+        background: "var(--rail-bg)",
+        borderRight: "1px solid var(--rail-border)",
+        display: "flex",
+        flexDirection: "column",
+        height: "100vh",
+        position: "fixed",
+        left: 0, top: 0,
+        zIndex: 100,
+        overflow: "hidden",
+        flexShrink: 0,
+      }}
+    >
+      {/* Logo */}
+      <div style={{
+        padding: "16px 14px",
+        display: "flex", alignItems: "center", gap: 12,
+        height: 60, flexShrink: 0,
+      }}>
+        <div style={{
+          width: 28, height: 28, flexShrink: 0,
+          background: "linear-gradient(135deg, #3B82F6, #8B5CF6)",
+          borderRadius: 6,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 12, fontWeight: 700, color: "#fff",
+          fontFamily: "var(--font-mono)",
+          boxShadow: "var(--shadow-glow-blue)",
+        }}>
+          Rx
+        </div>
+        <span style={{
+          fontSize: 15, fontWeight: 700, color: "var(--text-primary)",
+          letterSpacing: "-0.01em", whiteSpace: "nowrap",
+          opacity: expanded ? 1 : 0,
+          transition: "opacity var(--transition-normal)",
+        }}>
+          ClaimConvert
+        </span>
+      </div>
+
+      <div style={{ height: 1, background: "var(--rail-border)", margin: "0 10px", flexShrink: 0 }} />
+
+      {/* Nav items */}
+      <div style={{ flex: 1, paddingTop: 8, paddingBottom: 8, display: "flex", flexDirection: "column", gap: 2, overflowY: "auto" }}>
+        {NAV_ITEMS.map(item => {
+          const isActive = location.pathname === item.to ||
+            (item.to !== "/" && location.pathname.startsWith(item.to));
+          return (
+            <div
+              key={item.to}
+              onClick={() => navigate(item.to)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                padding: "10px 14px",
+                borderRadius: "var(--radius-md)",
+                margin: "0 6px",
+                background: isActive ? "var(--status-info-bg)" : "transparent",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                userSelect: "none",
+              }}
+            >
+              <div style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", width: 20, height: 20 }}>
+                <item.Icon
+                  size={20}
+                  color={isActive ? "var(--accent-bright)" : "#9BBDD8"}
+                />
+              </div>
+              <span style={{
+                fontSize: 14,
+                fontWeight: isActive ? 700 : 500,
+                opacity: expanded ? 1 : 0,
+                transition: "opacity var(--transition-normal)",
+                color: isActive ? "var(--accent-bright)" : "var(--text-secondary)",
+                minWidth: 0,
+              }}>
+                {item.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Stats strip */}
+      <div style={{
+        borderTop: "1px solid var(--rail-border)",
+        padding: "12px 14px",
+        flexShrink: 0,
+        minHeight: 52,
+        display: "flex",
+        alignItems: "center",
+      }}>
+        {/* Collapsed: centered db icon */}
+        <div style={{
+          display: "flex", alignItems: "center", gap: 10,
+          width: "100%",
+        }}>
+          <div style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", width: 20 }}>
+            <IconDatabase size={14} color="#5A7090" />
+          </div>
+          <div style={{
+            opacity: expanded ? 1 : 0,
+            transition: "opacity var(--transition-normal)",
+            minWidth: 0, overflow: "hidden",
+          }}>
+            <div style={{ fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", lineHeight: 1.3, whiteSpace: "nowrap" }}>
+              {stats?.total_conversions ?? "—"} conversions
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
+              <div style={{
+                width: 6, height: 6, borderRadius: "50%", flexShrink: 0,
+                background: stats ? "var(--status-success)" : "var(--status-neutral)",
+                boxShadow: stats ? "var(--shadow-glow-green)" : "none",
+              }} />
+              <span style={{
+                fontSize: 11, fontWeight: 500, color: "var(--text-tertiary)",
+                whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                maxWidth: 140,
+              }}>
+                {stats?.active_rule_set ?? "No rule set"}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
-
-      <nav className="sidebar-nav">
-        {items.map(item => (
-          <button
-            key={item.path}
-            className={`sidebar-nav-item${current === item.path ? " active" : ""}`}
-            onClick={() => navigate(item.path)}
-          >
-            <span className="sidebar-nav-icon">{item.icon}</span>
-            <span>{item.label}</span>
-          </button>
-        ))}
-      </nav>
-
-      <div className="sidebar-footer">
-        <div>Rules folder</div>
-        {rulesLoaded != null && (
-          <div className="sidebar-footer-badge">
-            {rulesLoaded} files loaded
-          </div>
-        )}
-      </div>
-    </aside>
+    </nav>
   );
 }
 
-// ── Converter page ──────────────────────────────────────────
+// ── Main layout ────────────────────────────────────────────────
+function Layout({ children }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg-base)" }}>
+      <Sidebar
+        expanded={expanded}
+        onExpand={() => setExpanded(true)}
+        onCollapse={() => setExpanded(false)}
+      />
+      <main style={{
+        flex: 1,
+        marginLeft: expanded ? "var(--rail-expanded)" : "var(--rail-collapsed)",
+        transition: "margin-left var(--transition-slow)",
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        minWidth: 0,
+      }}>
+        {children}
+      </main>
+    </div>
+  );
+}
+
+// ── Converter page ─────────────────────────────────────────────
 function ConverterPage() {
   const navigate = useNavigate();
   const [steps, setSteps] = useState([]);
@@ -83,18 +225,14 @@ function ConverterPage() {
   const [isConverting, setIsConverting] = useState(false);
   const [error, setError] = useState(null);
   const [changeTypeFilter, setChangeTypeFilter] = useState(null);
-  const [batchJobId, setBatchJobId] = useState(null);  // null = no active batch
+  const [batchJobId, setBatchJobId] = useState(null);
 
-  function _streamCallbacks(fileName) {
+  function _streamCallbacks() {
     return {
       onStep: (stepData) => {
         setSteps(prev => {
           const idx = prev.findIndex(s => s.id === stepData.id);
-          if (idx >= 0) {
-            const next = [...prev];
-            next[idx] = stepData;
-            return next;
-          }
+          if (idx >= 0) { const next = [...prev]; next[idx] = stepData; return next; }
           return [...prev, stepData];
         });
       },
@@ -107,74 +245,78 @@ function ConverterPage() {
   }
 
   async function handleConvert(d0Text) {
-    setError(null);
-    setResult(null);
-    setSteps([]);
-    setChangeTypeFilter(null);
-    setIsConverting(true);
-
-    try {
-      await convertStream(d0Text, _streamCallbacks());
-    } catch (e) {
-      setError(e.message || "Conversion failed. Is the backend running on port 8000?");
-    } finally {
-      setIsConverting(false);
-    }
+    setError(null); setResult(null); setSteps([]);
+    setChangeTypeFilter(null); setIsConverting(true);
+    try { await convertStream(d0Text, _streamCallbacks()); }
+    catch (e) { setError(e.message || "Conversion failed. Is the backend running on port 8000?"); }
+    finally { setIsConverting(false); }
   }
 
-  async function handleConvertHex(rawBytes, fileName) {
-    setError(null);
-    setResult(null);
-    setSteps([]);
-    setChangeTypeFilter(null);
-    setIsConverting(true);
-
-    try {
-      await convertHexStream(rawBytes, _streamCallbacks(fileName));
-    } catch (e) {
-      setError(e.message || "Conversion failed. Is the backend running on port 8000?");
-    } finally {
-      setIsConverting(false);
-    }
+  async function handleConvertHex(rawBytes) {
+    setError(null); setResult(null); setSteps([]);
+    setChangeTypeFilter(null); setIsConverting(true);
+    try { await convertHexStream(rawBytes, _streamCallbacks()); }
+    catch (e) { setError(e.message || "Conversion failed."); }
+    finally { setIsConverting(false); }
   }
 
   async function handleBatch(text) {
-    setError(null);
-    setBatchJobId(null);
-    try {
-      const jobId = await convertBatch(text);
-      setBatchJobId(jobId);
-    } catch (e) {
-      setError(e.message || "Failed to submit batch.");
-    }
+    setError(null); setBatchJobId(null);
+    try { const jobId = await convertBatch(text); setBatchJobId(jobId); }
+    catch (e) { setError(e.message || "Failed to submit batch."); }
   }
 
   async function handleLoadSample(type, setText) {
-    try {
-      const text = await fetchSample(type);
-      setText(text);
-    } catch (e) {
-      setError("Failed to load sample: " + e.message);
-    }
+    try { setText(await fetchSample(type)); }
+    catch (e) { setError("Failed to load sample: " + e.message); }
   }
 
   function handleNewConversion() {
-    setResult(null);
-    setSteps([]);
-    setError(null);
-    setChangeTypeFilter(null);
-    setBatchJobId(null);
-    setConversionId(null);
+    setResult(null); setSteps([]); setError(null);
+    setChangeTypeFilter(null); setBatchJobId(null); setConversionId(null);
   }
 
   const showPipeline = steps.length > 0 || isConverting;
 
   return (
-    <div className="main-content">
-      {showPipeline && <PipelineSteps steps={steps} isRunning={isConverting} />}
+    <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+      <PageHeader
+        eyebrow="Convert"
+        title="D.0 → F6 Converter"
+        subtitle="Paste a D.0 transaction. The agent converts every field and logs a complete audit trail."
+        actions={result && conversionId && (
+          <button
+            onClick={() => navigate(`/history/${conversionId}`)}
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              background: "transparent", border: "1px solid var(--border-default)",
+              color: "var(--text-secondary)", borderRadius: "var(--radius-md)",
+              padding: "6px 14px", fontSize: "var(--text-sm)", cursor: "pointer",
+            }}
+          >
+            View in History <IconArrowRight size={13} />
+          </button>
+        )}
+      />
+
+      {showPipeline && <PipelineCircuit steps={steps} isRunning={isConverting} />}
+
+      {error && (
+        <div style={{
+          margin: "16px 40px",
+          padding: "12px 16px",
+          background: "var(--status-error-bg)",
+          border: "1px solid var(--status-error)",
+          borderLeft: "3px solid var(--status-error)",
+          borderRadius: "var(--radius-md)",
+          color: "var(--status-error)", fontSize: "var(--text-sm)",
+        }}>
+          {error}
+        </div>
+      )}
 
       {!result && !isConverting && (
-        <>
+        <div style={{ padding: "24px 40px", flex: 1, display: "flex", flexDirection: "column", gap: 24 }}>
           <InputPanel
             onConvert={handleConvert}
             onConvertHex={handleConvertHex}
@@ -183,117 +325,68 @@ function ConverterPage() {
             converting={isConverting}
           />
           <BatchUpload />
-        </>
-      )}
-
-      {/* Batch progress bar — shown above the output panel whenever a batch is active */}
-      {batchJobId && (
-        <BatchProgress
-          jobId={batchJobId}
-          onDone={() => {}}
-        />
-      )}
-
-      {isConverting && !result && (
-        <div style={{ textAlign: "center", padding: 80, color: "var(--text-secondary)" }}>
-          <div style={{ fontSize: 13 }}>Converting…</div>
+          {batchJobId && <BatchProgress jobId={batchJobId} onDone={() => {}} />}
         </div>
       )}
 
-      {error && (
-        <div style={{ maxWidth: 860, margin: "0 auto 0", padding: "0 24px 24px" }}>
-          <div style={{ padding: "12px 18px", background: "var(--error-light)", border: "1px solid var(--error)", borderRadius: "var(--radius)", color: "var(--error)", fontSize: 13 }}>
-            <strong>Error:</strong> {error}
-          </div>
+      {isConverting && !result && (
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "center",
+          flex: 1, color: "var(--text-tertiary)", fontSize: "var(--text-sm)",
+        }}>
+          Converting…
         </div>
       )}
 
       {result && (
-        <div style={{ maxWidth: 1140, margin: "0 auto", padding: "24px 20px" }}>
-          {/* Header */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
-            <button className="btn btn-ghost" onClick={handleNewConversion} style={{ fontSize: 13 }}>
+        <div style={{ padding: "24px 40px", flex: 1, display: "flex", flexDirection: "column", gap: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <button
+              onClick={handleNewConversion}
+              style={{
+                background: "transparent", border: "none",
+                color: "var(--text-secondary)", cursor: "pointer",
+                fontSize: "var(--text-sm)", padding: "4px 0",
+                display: "flex", alignItems: "center", gap: 4,
+              }}
+            >
               ← New conversion
             </button>
             <TransactionBadge type={result.transaction_type} />
-            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
-              {conversionId && (
-                <button
-                  className="btn btn-secondary"
-                  onClick={() => navigate(`/history/${conversionId}`)}
-                  style={{ fontSize: 12 }}
-                >
-                  View in History →
-                </button>
-              )}
-              <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>
-                {result.audit.entries.length} fields audited
-              </span>
-            </div>
+            <span style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", marginLeft: "auto" }}>
+              {result.audit.entries.length} fields audited
+            </span>
           </div>
 
-          {/* Downloads */}
-          <div style={{ marginBottom: 20 }}>
-            <DownloadBar
-              f6Output={result.f6_output}
-              auditData={result.audit}
-              filename="conversion"
-            />
-          </div>
-
-          {/* Output panel */}
-          <div style={{ marginBottom: 20 }}>
-            <OutputPanel
-              d0Input={result.d0_input}
-              f6Output={result.f6_output}
-              auditEntries={result.audit.entries}
-            />
-          </div>
-
-          {/* Validation */}
-          <div style={{ marginBottom: 20 }}>
-            <ValidationFindings findings={result.audit.findings} />
-          </div>
-
-          {/* Audit */}
-          <div style={{ marginBottom: 8 }}>
-            <AuditSummaryBar
-              summary={result.audit.summary}
-              activeFilter={changeTypeFilter}
-              onFilter={setChangeTypeFilter}
-            />
-          </div>
-          <AuditTable
-            entries={result.audit.entries}
-            changeTypeFilter={changeTypeFilter}
-          />
+          <DownloadBar f6Output={result.f6_output} auditData={result.audit} filename="conversion" />
+          <OutputPanel d0Input={result.d0_input} f6Output={result.f6_output} auditEntries={result.audit.entries} />
+          <ValidationFindings findings={result.audit.findings} />
+          <AuditSummaryBar summary={result.audit.summary} activeFilter={changeTypeFilter} onFilter={setChangeTypeFilter} />
+          <AuditTable entries={result.audit.entries} changeTypeFilter={changeTypeFilter} />
         </div>
       )}
     </div>
   );
 }
 
-// ── Root app with sidebar layout ────────────────────────────
+// ── Root ───────────────────────────────────────────────────────
 export default function App() {
   return (
     <BrowserRouter>
-      <div className="app-shell">
-        <SidebarWithLocation />
-        <Routes>
-          <Route path="/"            element={<ConverterPage />} />
-          <Route path="/reverse"    element={<ReverseConverterPage />} />
-          <Route path="/validate"   element={<ValidatorPage />} />
-          <Route path="/history"    element={<div className="main-content"><HistoryPage /></div>} />
-          <Route path="/history/:id" element={<div className="main-content"><ConversionDetailPage /></div>} />
-          <Route path="/batches"    element={<div className="main-content"><BatchesPage /></div>} />
-          <Route path="/rules"      element={<div className="main-content"><RulesPage /></div>} />
-          <Route path="/ingest"     element={<div className="main-content"><IngestionPage /></div>} />
-        </Routes>
-      </div>
+      <ToastProvider>
+        <Layout>
+          <Routes>
+            <Route path="/"            element={<ConverterPage />} />
+            <Route path="/reverse"     element={<ReverseConverterPage />} />
+            <Route path="/validate"    element={<ValidatorPage />} />
+            <Route path="/history"     element={<HistoryPage />} />
+            <Route path="/history/:id" element={<ConversionDetailPage />} />
+            <Route path="/batches"     element={<BatchesPage />} />
+            <Route path="/rules"       element={<RulesPage />} />
+            <Route path="/ingest"      element={<IngestionPage />} />
+          </Routes>
+        </Layout>
+      </ToastProvider>
     </BrowserRouter>
   );
-}
-
-function SidebarWithLocation() {
-  return <Sidebar rulesLoaded={null} />;
 }

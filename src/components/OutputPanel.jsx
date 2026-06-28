@@ -1,12 +1,8 @@
 import { useMemo, useState } from "react";
+import { IconCopy, IconCheck } from './Icons';
 
 /**
  * Renders the F6 output with inline diff highlighting.
- * - Added fields → green
- * - Transformed/modified fields → amber
- * - Removed fields (~~...~~) → red strikethrough
- * - Carried → dim white
- * - Segment name → blue bold
  */
 function renderF6Line(line, auditIndex) {
   const tokens = line.split("|");
@@ -30,7 +26,7 @@ function renderF6Line(line, auditIndex) {
 
     let cls = "field-carried";
     if (info) {
-      if (info.change_type === "added")       cls = "field-added";
+      if (info.change_type === "added")           cls = "field-added";
       else if (info.change_type === "transformed") cls = "field-transformed";
       else if (info.change_type === "modified")   cls = "field-modified";
       else if (info.change_type === "removed")    cls = "field-removed";
@@ -43,20 +39,38 @@ function renderF6Line(line, auditIndex) {
 function CodePane({ title, content, accent, auditIndex = null }) {
   const lines = content ? content.split("\n") : [];
   return (
-    <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
-      <div style={{ padding: "6px 14px", fontWeight: 600, fontSize: 11, color: accent, background: accent + "14", borderBottom: "1px solid var(--border)", textTransform: "uppercase", letterSpacing: ".04em" }}>
+    <div style={{ flex: 1, minWidth: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+      <div style={{
+        padding: "8px 16px",
+        background: "var(--bg-raised)",
+        borderBottom: "1px solid var(--border-subtle)",
+        fontSize: "var(--text-xs)",
+        fontWeight: 600,
+        textTransform: "uppercase",
+        letterSpacing: "0.08em",
+        color: "var(--text-tertiary)",
+        flexShrink: 0,
+      }}>
         {title}
       </div>
-      <div style={{ maxHeight: 380, overflowY: "auto", overflowX: "auto", background: "var(--bg-code)", padding: "10px 0" }}>
+      <div style={{
+        height: 280, overflowY: "auto", overflowX: "auto",
+        background: "var(--bg-code)", padding: "12px 0",
+      }}>
         {lines.map((line, i) => (
-          <div key={i} style={{ display: "flex", alignItems: "flex-start", fontFamily: "var(--mono)", fontSize: 11.5, lineHeight: 1.65 }}>
-            <span style={{ minWidth: 36, textAlign: "right", paddingRight: 10, color: "rgba(255,255,255,.2)", userSelect: "none", flexShrink: 0 }}>
+          <div key={i} style={{
+            display: "flex", alignItems: "flex-start",
+            fontFamily: "var(--font-mono)", fontSize: "var(--text-sm)", lineHeight: 1.65,
+          }}>
+            <span style={{
+              minWidth: 36, textAlign: "right", paddingRight: 10,
+              color: "rgba(255,255,255,.15)", userSelect: "none", flexShrink: 0,
+              fontSize: "var(--text-xs)",
+            }}>
               {i + 1}
             </span>
-            <span style={{ flex: 1, padding: "0 12px", wordBreak: "break-all", whiteSpace: "pre-wrap" }}>
-              {auditIndex ? renderF6Line(line, auditIndex) : (
-                <span style={{ color: "rgba(255,255,255,.7)" }}>{line || " "}</span>
-              )}
+            <span style={{ flex: 1, padding: "0 12px", wordBreak: "break-all", whiteSpace: "pre-wrap", color: "var(--text-code)" }}>
+              {auditIndex ? renderF6Line(line, auditIndex) : (line || " ")}
             </span>
           </div>
         ))}
@@ -85,30 +99,61 @@ export default function OutputPanel({ d0Input, f6Output, auditEntries }) {
   }
 
   return (
-    <div className="card" style={{ overflow: "hidden" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", borderBottom: "1px solid var(--border)", background: "var(--bg-elevated)" }}>
-        <span style={{ fontWeight: 600, fontSize: 13, color: "var(--text-primary)" }}>D.0 → F6 Output</span>
-        <button onClick={copyF6} className="btn btn-secondary" style={{ fontSize: 12, padding: "4px 12px" }}>
-          {copied ? "✓ Copied" : "Copy F6"}
+    <div style={{
+      background: "var(--bg-surface)",
+      border: "1px solid var(--border-subtle)",
+      borderRadius: "var(--radius-md)",
+      overflow: "hidden",
+    }}>
+      {/* Header */}
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "8px 16px",
+        borderBottom: "1px solid var(--border-subtle)",
+        background: "var(--bg-raised)",
+      }}>
+        <span style={{ fontWeight: 600, fontSize: "var(--text-base)", color: "var(--text-secondary)" }}>
+          D.0 → F6 Output
+        </span>
+        <button
+          onClick={copyF6}
+          style={{
+            display: "flex", alignItems: "center", gap: 6,
+            background: "transparent", border: "1px solid var(--border-subtle)",
+            color: copied ? "var(--status-success)" : "var(--text-secondary)",
+            borderRadius: "var(--radius-sm)", padding: "4px 10px",
+            fontSize: "var(--text-xs)", cursor: "pointer",
+            transition: "all var(--transition-fast)",
+          }}
+        >
+          {copied ? <IconCheck size={12} color="var(--status-success)" /> : <IconCopy size={12} />}
+          {copied ? "Copied" : "Copy F6"}
         </button>
       </div>
-      <div style={{ display: "flex", borderTop: "1px solid var(--border)" }}>
-        <CodePane title="D.0 Input" content={d0Input} accent="var(--error)" />
-        <div style={{ width: 1, background: "var(--border)", flexShrink: 0 }} />
-        <CodePane title="F6 Output" content={f6Output} accent="var(--success)" auditIndex={auditIndex} />
+
+      {/* Two-column diff */}
+      <div style={{ display: "flex", borderTop: "1px solid var(--border-subtle)" }}>
+        <CodePane title="D.0 Input" content={d0Input} accent="var(--status-error)" />
+        <div style={{ width: 1, background: "var(--border-subtle)", flexShrink: 0 }} />
+        <CodePane title="F6 Output" content={f6Output} accent="var(--status-success)" auditIndex={auditIndex} />
       </div>
+
       {/* Legend */}
-      <div style={{ padding: "8px 16px", borderTop: "1px solid var(--border)", display: "flex", gap: 16, flexWrap: "wrap", background: "var(--bg-elevated)" }}>
+      <div style={{
+        padding: "8px 16px", borderTop: "1px solid var(--border-subtle)",
+        display: "flex", gap: 16, flexWrap: "wrap",
+        background: "var(--bg-raised)",
+      }}>
         {[
-          { cls: "field-added", label: "added" },
+          { cls: "field-added",       label: "added" },
           { cls: "field-transformed", label: "transformed" },
-          { cls: "field-modified", label: "modified" },
-          { cls: "field-removed", label: "removed" },
-          { cls: "field-carried", label: "carried" },
+          { cls: "field-modified",    label: "modified" },
+          { cls: "field-removed",     label: "removed" },
+          { cls: "field-carried",     label: "carried" },
         ].map(({ cls, label }) => (
-          <span key={cls} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11 }}>
-            <span className={cls} style={{ fontFamily: "var(--mono)", background: "var(--bg-code)", padding: "0 4px", borderRadius: 2 }}>■</span>
-            <span style={{ color: "var(--text-secondary)" }}>{label}</span>
+          <span key={cls} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "var(--text-xs)" }}>
+            <span className={cls} style={{ fontFamily: "var(--font-mono)", background: "var(--bg-code)", padding: "0 4px", borderRadius: 2 }}>■</span>
+            <span style={{ color: "var(--text-tertiary)" }}>{label}</span>
           </span>
         ))}
       </div>

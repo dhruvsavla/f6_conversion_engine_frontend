@@ -1,106 +1,99 @@
+import { IconCheck, IconX, IconWarn } from './Icons';
+
 export default function ValidationFindings({ findings }) {
   if (!findings || findings.length === 0) {
     return (
-      <div className="card" style={{ padding: "14px 20px", display: "flex", alignItems: "center", gap: 8 }}>
-        <span style={{ color: "var(--success)", fontSize: 16 }}>✓</span>
-        <span style={{ fontWeight: 500, fontSize: 13 }}>No validation findings</span>
-        <span style={{ color: "var(--text-secondary)", fontSize: 12 }}>— conversion completed cleanly.</span>
+      <div style={{
+        display: "flex", alignItems: "center", gap: 8,
+        padding: "12px 16px",
+        background: "var(--status-success-bg)",
+        border: "1px solid var(--status-success)",
+        borderLeft: "3px solid var(--status-success)",
+        borderRadius: "var(--radius-md)",
+      }}>
+        <IconCheck size={14} color="var(--status-success)" />
+        <span style={{ fontWeight: 500, fontSize: "var(--text-base)", color: "var(--status-success)" }}>No validation findings</span>
+        <span style={{ color: "var(--text-tertiary)", fontSize: "var(--text-sm)" }}>— conversion completed cleanly.</span>
       </div>
     );
   }
 
-  const errCount = findings.filter(f => f.severity === "ERROR").length;
+  const errCount  = findings.filter(f => f.severity === "ERROR").length;
   const warnCount = findings.filter(f => f.severity === "WARN").length;
 
   return (
-    <div className="card" style={{ overflow: "hidden" }}>
-      <div
-        style={{
-          padding: "12px 18px",
-          borderBottom: "1px solid var(--border)",
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-        }}
-      >
-        <span style={{ fontWeight: 600, fontSize: 13 }}>Validation findings</span>
-        <span
-          style={{
-            padding: "1px 8px",
-            borderRadius: 999,
-            background: errCount > 0 ? "var(--error-light)" : "var(--warning-light)",
-            color: errCount > 0 ? "var(--error)" : "var(--warning)",
-            fontSize: 11,
-            fontWeight: 600,
-          }}
-        >
-          {findings.length} finding{findings.length !== 1 ? "s" : ""}
+    <div>
+      {/* Summary header */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: 8,
+        marginBottom: 8, padding: "2px 0",
+      }}>
+        <span style={{ fontWeight: 600, fontSize: "var(--text-base)", color: "var(--text-secondary)" }}>
+          Validation findings
         </span>
         {errCount > 0 && (
-          <span style={{ fontSize: 11, color: "var(--error)", fontWeight: 500 }}>
+          <span style={{ padding: "1px 8px", borderRadius: "var(--radius-full)", background: "var(--status-error-bg)", color: "var(--status-error)", fontSize: "var(--text-xs)", fontWeight: 600 }}>
             {errCount} error{errCount !== 1 ? "s" : ""}
           </span>
         )}
         {warnCount > 0 && (
-          <span style={{ fontSize: 11, color: "var(--warning)", fontWeight: 500 }}>
+          <span style={{ padding: "1px 8px", borderRadius: "var(--radius-full)", background: "var(--status-warn-bg)", color: "var(--status-warn)", fontSize: "var(--text-xs)", fontWeight: 600 }}>
             {warnCount} warning{warnCount !== 1 ? "s" : ""}
           </span>
         )}
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-        {findings.map((f, i) => (
-          <div
-            key={i}
-            style={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: 10,
-              padding: "10px 18px",
-              borderLeft: `3px solid ${f.severity === "ERROR" ? "var(--error)" : "var(--warning)"}`,
-              borderBottom: i < findings.length - 1 ? "1px solid var(--border)" : "none",
-              background: f.severity === "ERROR" ? "var(--error-light)" : "var(--warning-light)",
-            }}
-          >
-            <span
-              className="badge"
+
+      {/* Finding cards */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {findings.map((f, i) => {
+          const isError = f.severity === "ERROR";
+          const borderColor = isError ? "var(--status-error)" : "var(--status-warn)";
+          const bgColor = isError ? "var(--status-error-bg)" : "var(--status-warn-bg)";
+          const Icon = isError ? IconX : IconWarn;
+          const iconColor = isError ? "var(--status-error)" : "var(--status-warn)";
+
+          return (
+            <div
+              key={i}
               style={{
-                background: f.severity === "ERROR" ? "var(--error)" : "var(--warning)",
-                color: "#fff",
-                flexShrink: 0,
-                fontSize: 10,
+                display: "flex", alignItems: "flex-start", gap: 10,
+                padding: "12px 16px",
+                background: bgColor,
+                border: `1px solid ${borderColor}`,
+                borderLeft: `3px solid ${borderColor}`,
+                borderRadius: "var(--radius-md)",
               }}
             >
-              {f.severity}
-            </span>
-            <span
-              className="mono"
-              style={{
-                fontSize: 11,
+              <Icon size={14} color={iconColor} style={{ flexShrink: 0, marginTop: 1 }} />
+              <span style={{
+                display: "inline-flex", alignItems: "center",
                 padding: "1px 6px",
-                background: "var(--bg-elevated)",
-                border: "1px solid var(--border-bright)",
-                borderRadius: 3,
-                flexShrink: 0,
-                color: "var(--text)",
-              }}
-            >
-              {f.code}
-            </span>
-            <div style={{ flex: 1 }}>
-              <span style={{ fontSize: 12, color: "var(--text)" }}>{f.message}</span>
-              <span
-                style={{
-                  marginLeft: 8,
-                  fontSize: 11,
-                  color: "var(--text-secondary)",
-                  fontFamily: "var(--mono)",
-                }}
-              >
-                {f.segment} · {f.field_id}
+                background: isError ? "rgba(239,68,68,0.2)" : "rgba(245,158,11,0.2)",
+                border: `1px solid ${borderColor}`,
+                borderRadius: "var(--radius-sm)",
+                fontSize: "var(--text-xs)", fontWeight: 700,
+                color: iconColor, flexShrink: 0, textTransform: "uppercase",
+              }}>
+                {f.severity}
               </span>
+              <span style={{
+                fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)",
+                color: "var(--text-tertiary)", flexShrink: 0,
+                padding: "1px 6px",
+                background: "var(--bg-raised)",
+                borderRadius: "var(--radius-sm)",
+              }}>
+                {f.code}
+              </span>
+              <div style={{ flex: 1 }}>
+                <span style={{ fontSize: "var(--text-sm)", color: "var(--text-primary)" }}>{f.message}</span>
+                <span style={{ marginLeft: 8, fontSize: "var(--text-xs)", color: "var(--text-tertiary)", fontFamily: "var(--font-mono)" }}>
+                  {f.segment} · {f.field_id}
+                </span>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

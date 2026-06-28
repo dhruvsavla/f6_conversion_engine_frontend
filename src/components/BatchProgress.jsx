@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { getBatchStatus } from "../api/client";
+import { IconSpinner } from './Icons';
 
 /**
  * Polls a batch job every 1 s and renders a progress bar + summary.
@@ -13,7 +14,6 @@ export default function BatchProgress({ jobId, onDone }) {
   useEffect(() => {
     if (!jobId) return;
 
-    // Reset whenever a new job starts
     setJob(null);
     setFetchError(null);
 
@@ -21,7 +21,6 @@ export default function BatchProgress({ jobId, onDone }) {
       try {
         const data = await getBatchStatus(jobId);
         setJob(data);
-        // Stop polling once the job reaches a terminal state
         if (data.status === "completed" || data.status === "error") {
           clearInterval(intervalRef.current);
           if (onDone) onDone(data);
@@ -32,11 +31,11 @@ export default function BatchProgress({ jobId, onDone }) {
       }
     }
 
-    poll(); // fetch immediately on mount so there's no 1 s blank delay
+    poll();
     intervalRef.current = setInterval(poll, 1000);
 
     return () => clearInterval(intervalRef.current);
-  }, [jobId]); // re-run only when jobId changes
+  }, [jobId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!jobId) return null;
 
@@ -46,118 +45,94 @@ export default function BatchProgress({ jobId, onDone }) {
   const status    = job?.status    ?? "pending";
   const isRunning = status === "pending" || status === "processing";
 
-  // Colour the bar: green when complete, red if any failures, blue while running
   const barColor =
     status === "error"
-      ? "var(--error)"
+      ? "var(--status-error)"
       : status === "completed" && (job?.failed ?? 0) > 0
-      ? "var(--warning)"
+      ? "var(--status-warn)"
       : status === "completed"
-      ? "var(--success)"
+      ? "var(--status-success)"
       : "var(--accent)";
 
   return (
-    <div
-      style={{
-        maxWidth: 860,
-        margin: "0 auto 0",
-        padding: "0 24px 24px",
-      }}
-    >
-      <div
-        className="card"
-        style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: 12 }}
-      >
-        {/* Header row */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 13, fontWeight: 600 }}>
-            {isRunning ? (
-              <>
-                <span style={{ display: "inline-block", animation: "spin 1s linear infinite", marginRight: 6 }}>⟳</span>
-                Batch processing…
-              </>
-            ) : status === "error" ? (
-              "Batch failed"
-            ) : (
-              "Batch complete"
-            )}
-          </span>
-          <span style={{ fontSize: 11, color: "var(--text-secondary)", fontFamily: "var(--mono)" }}>
-            {jobId.slice(0, 8)}…
-          </span>
-        </div>
-
-        {/* Progress bar */}
-        <div
-          style={{
-            height: 8,
-            background: "rgba(255,255,255,.08)",
-            borderRadius: 99,
-            overflow: "hidden",
-          }}
-        >
-          <div
-            style={{
-              height: "100%",
-              width: `${progress}%`,
-              background: barColor,
-              borderRadius: 99,
-              transition: "width .4s ease, background .4s ease",
-            }}
-          />
-        </div>
-
-        {/* Summary text */}
-        <div style={{ fontSize: 12, color: "var(--text-secondary)", display: "flex", gap: 16, flexWrap: "wrap" }}>
-          {fetchError ? (
-            <span style={{ color: "var(--error)" }}>Poll error: {fetchError}</span>
-          ) : job ? (
-            <>
-              <span>
-                {done} / {total} claims processed
-              </span>
-              <span style={{ color: "var(--success)" }}>
-                {job.successful} successful
-              </span>
-              {job.failed > 0 && (
-                <span style={{ color: "var(--warning)" }}>
-                  {job.failed} failed
-                </span>
-              )}
-              <span style={{ marginLeft: "auto" }}>{progress}%</span>
-            </>
+    <div style={{
+      background: "var(--bg-surface)",
+      border: "1px solid var(--border-subtle)",
+      borderRadius: "var(--radius-md)",
+      padding: "16px 20px",
+      display: "flex", flexDirection: "column", gap: 10,
+    }}>
+      {/* Header row */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <span style={{ fontSize: "var(--text-base)", fontWeight: 600, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 6 }}>
+          {isRunning ? (
+            <><IconSpinner size={14} color="var(--accent)" /> Batch processing…</>
+          ) : status === "error" ? (
+            "Batch failed"
           ) : (
-            <span>Initialising…</span>
+            "Batch complete"
           )}
-        </div>
+        </span>
+        <span style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", fontFamily: "var(--font-mono)" }}>
+          {jobId.slice(0, 8)}…
+        </span>
+      </div>
 
-        {/* Per-claim errors (collapsed unless there are failures) */}
-        {job?.errors?.length > 0 && (
-          <details style={{ marginTop: 4 }}>
-            <summary
-              style={{ fontSize: 11, color: "var(--text-secondary)", cursor: "pointer", userSelect: "none" }}
-            >
-              {job.errors.length} claim error{job.errors.length !== 1 ? "s" : ""} — expand for details
-            </summary>
-            <ul
-              style={{
-                margin: "8px 0 0",
-                padding: "0 0 0 16px",
-                fontSize: 11,
-                color: "var(--warning)",
-                lineHeight: 1.8,
-                fontFamily: "var(--mono)",
-              }}
-            >
-              {job.errors.map((e, i) => (
-                <li key={i}>{e}</li>
-              ))}
-            </ul>
-          </details>
+      {/* Progress bar */}
+      <div style={{
+        height: 6,
+        background: "var(--bg-raised)",
+        borderRadius: "var(--radius-full)",
+        overflow: "hidden",
+      }}>
+        <div style={{
+          height: "100%",
+          width: `${progress}%`,
+          background: isRunning
+            ? "linear-gradient(90deg, var(--accent), var(--status-teal))"
+            : barColor,
+          borderRadius: "var(--radius-full)",
+          transition: "width .4s ease",
+          animation: isRunning ? "shimmer 1.5s ease infinite" : "none",
+          backgroundSize: "200% 100%",
+        }} />
+      </div>
+
+      {/* Summary text */}
+      <div style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", display: "flex", gap: 16, flexWrap: "wrap" }}>
+        {fetchError ? (
+          <span style={{ color: "var(--status-error)" }}>Poll error: {fetchError}</span>
+        ) : job ? (
+          <>
+            <span>{done} / {total} claims processed</span>
+            <span style={{ color: "var(--status-success)" }}>{job.successful} successful</span>
+            {job.failed > 0 && (
+              <span style={{ color: "var(--status-warn)" }}>{job.failed} failed</span>
+            )}
+            <span style={{ marginLeft: "auto" }}>{progress}%</span>
+          </>
+        ) : (
+          <span>Initialising…</span>
         )}
       </div>
 
-      <style>{`@keyframes spin { from { transform:rotate(0deg) } to { transform:rotate(360deg) } }`}</style>
+      {/* Per-claim errors */}
+      {job?.errors?.length > 0 && (
+        <details style={{ marginTop: 4 }}>
+          <summary style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", cursor: "pointer", userSelect: "none" }}>
+            {job.errors.length} claim error{job.errors.length !== 1 ? "s" : ""} — expand for details
+          </summary>
+          <ul style={{
+            margin: "8px 0 0", padding: "0 0 0 16px",
+            fontSize: "var(--text-xs)", color: "var(--status-warn)",
+            lineHeight: 1.8, fontFamily: "var(--font-mono)",
+          }}>
+            {job.errors.map((e, i) => (
+              <li key={i}>{e}</li>
+            ))}
+          </ul>
+        </details>
+      )}
     </div>
   );
 }

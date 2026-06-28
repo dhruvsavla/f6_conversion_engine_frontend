@@ -1,20 +1,20 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { listConversions } from "../api/client";
+import TransactionBadge from "../components/TransactionBadge";
+import PageHeader from "../components/PageHeader";
+import EmptyState from "../components/EmptyState";
+import { SkeletonCard } from "../components/Skeleton";
+import { IconHistory } from "../components/Icons";
 
 const STATUS_COLORS = {
-  success:    "var(--success)",
-  failed:     "var(--error)",
-  processing: "var(--accent)",
-  pending:    "var(--text-secondary)",
+  success:    "var(--status-success)",
+  failed:     "var(--status-error)",
+  processing: "var(--status-info)",
+  pending:    "var(--status-neutral)",
 };
 
-const STATUS_ICONS = {
-  success:    "✓",
-  failed:     "✕",
-  processing: "⟳",
-  pending:    "·",
-};
+const STATUS_OPTIONS = ["all", "success", "failed", "processing", "pending"];
 
 function fmtDate(iso) {
   if (!iso) return "—";
@@ -36,89 +36,111 @@ function relativeTime(iso) {
   return `${Math.floor(h / 24)}d ago`;
 }
 
+function StatusPill({ status }) {
+  const color = STATUS_COLORS[status] || "var(--status-neutral)";
+  const bgMap = {
+    success:    "var(--status-success-bg)",
+    failed:     "var(--status-error-bg)",
+    processing: "var(--status-info-bg)",
+    pending:    "var(--status-neutral-bg)",
+  };
+  const bg = bgMap[status] || "var(--status-neutral-bg)";
+  return (
+    <span style={{
+      padding: "2px 8px", borderRadius: "var(--radius-full)",
+      background: bg, color, fontSize: "var(--text-xs)",
+      fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em",
+    }}>
+      {status}
+    </span>
+  );
+}
+
 function ConversionCard({ conv, onClick }) {
-  const statusColor = STATUS_COLORS[conv.status] || "var(--text-secondary)";
-  const icon        = STATUS_ICONS[conv.status] || "·";
-  const isSpinning  = conv.status === "processing";
+  const statusColor = STATUS_COLORS[conv.status] || "var(--status-neutral)";
 
   return (
     <div
       onClick={onClick}
       style={{
         background: "var(--bg-surface)",
-        border: "1px solid var(--border-bright)",
-        borderLeft: `4px solid ${statusColor}`,
-        borderRadius: "var(--radius)",
-        padding: "16px 18px",
+        border: "1px solid var(--border-subtle)",
+        borderRadius: "var(--radius-lg)",
+        padding: "14px 20px 14px 23px",
         cursor: "pointer",
-        transition: "all .18s ease",
+        transition: "all var(--transition-normal)",
         position: "relative",
+        overflow: "hidden",
       }}
-      onMouseEnter={e => { e.currentTarget.style.borderColor = "#3D444E"; e.currentTarget.style.transform = "translateY(-1px)"; }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border-bright)"; e.currentTarget.style.transform = ""; }}
+      onMouseEnter={e => {
+        e.currentTarget.style.borderColor = "var(--border-default)";
+        e.currentTarget.style.transform = "translateY(-1px)";
+        e.currentTarget.style.boxShadow = "var(--shadow-md)";
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.borderColor = "var(--border-subtle)";
+        e.currentTarget.style.transform = "";
+        e.currentTarget.style.boxShadow = "none";
+      }}
     >
-      {/* Status icon */}
-      <div style={{ position: "absolute", top: 14, right: 16, fontSize: 15, color: statusColor, animation: isSpinning ? "spin 1s linear infinite" : "none" }}>
-        {icon}
+      {/* Left accent bar */}
+      <div style={{
+        position: "absolute", left: 0, top: 0, bottom: 0, width: 3,
+        background: statusColor,
+      }} />
+
+      {/* Row 1: badge + filename + status */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
+        {conv.transaction_type && <TransactionBadge type={conv.transaction_type} />}
+        <span style={{
+          fontFamily: "var(--font-mono)", fontSize: "var(--text-sm)",
+          color: "var(--text-code)", flex: 1, minWidth: 0,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          wordBreak: "break-all",
+        }}>
+          {conv.filename}
+        </span>
+        <StatusPill status={conv.status} />
       </div>
 
-      {/* Filename */}
-      <div style={{ fontFamily: "var(--mono)", fontSize: 12, color: "var(--text-primary)", fontWeight: 600, marginBottom: 5, paddingRight: 24, wordBreak: "break-all" }}>
-        {conv.filename}
+      {/* Divider */}
+      <div style={{ height: 1, background: "var(--border-subtle)", margin: "8px 0" }} />
+
+      {/* Row 2: counts + timestamp */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        {conv.status === "success" ? (
+          <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)" }}>
+            <span style={{ color: "var(--status-success)" }}>{conv.fields_added} added</span>
+            {" · "}
+            <span>{(conv.fields_carried || 0) + (conv.fields_transformed || 0)} carried/transformed</span>
+            {conv.warnings_count > 0 && <><span style={{ opacity: 0.4 }}> · </span><span style={{ color: "var(--status-warn)" }}>{conv.warnings_count} warn</span></>}
+            {conv.errors_count > 0 && <><span style={{ opacity: 0.4 }}> · </span><span style={{ color: "var(--status-error)" }}>{conv.errors_count} err</span></>}
+          </span>
+        ) : conv.status === "failed" ? (
+          <span style={{ fontSize: "var(--text-xs)", color: "var(--status-error)", fontStyle: "italic" }}>
+            {conv.error_message ? conv.error_message.slice(0, 80) : "Conversion failed"}
+          </span>
+        ) : (
+          <span style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", fontStyle: "italic" }}>
+            {conv.status === "processing" ? "Processing…" : "Pending"}
+          </span>
+        )}
+        <span style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", marginLeft: "auto" }} title={fmtDate(conv.created_at)}>
+          {relativeTime(conv.created_at)}
+        </span>
       </div>
-
-      {/* Transaction type badge */}
-      {conv.transaction_type && (
-        <div style={{ display: "inline-flex", alignItems: "center", padding: "2px 8px", background: "var(--accent-light)", border: "1px solid var(--accent-border)", borderRadius: 999, fontSize: 10, fontWeight: 700, color: "var(--accent)", letterSpacing: ".05em", textTransform: "uppercase", marginBottom: 8 }}>
-          {conv.transaction_type}
-        </div>
-      )}
-
-      {/* Stats row */}
-      {conv.status === "success" ? (
-        <div style={{ fontSize: 11, color: "var(--text-secondary)", marginBottom: 6 }}>
-          <span style={{ color: "var(--success)" }}>{conv.fields_added} added</span>
-          <span style={{ margin: "0 5px", opacity: .4 }}>·</span>
-          <span>{(conv.fields_carried || 0) + (conv.fields_transformed || 0)} carried/transformed</span>
-          {conv.warnings_count > 0 && (
-            <><span style={{ margin: "0 5px", opacity: .4 }}>·</span>
-            <span style={{ color: "var(--warning)" }}>{conv.warnings_count} warn</span></>
-          )}
-          {conv.errors_count > 0 && (
-            <><span style={{ margin: "0 5px", opacity: .4 }}>·</span>
-            <span style={{ color: "var(--error)" }}>{conv.errors_count} err</span></>
-          )}
-        </div>
-      ) : conv.status === "failed" ? (
-        <div style={{ fontSize: 11, color: "var(--error)", marginBottom: 6, fontStyle: "italic" }}>
-          {conv.error_message ? conv.error_message.slice(0, 80) : "Conversion failed"}
-        </div>
-      ) : (
-        <div style={{ fontSize: 11, color: "var(--text-secondary)", marginBottom: 6, fontStyle: "italic" }}>
-          {conv.status === "processing" ? "Processing…" : "Pending"}
-        </div>
-      )}
-
-      {/* Timestamp */}
-      <div style={{ fontSize: 10, color: "var(--text-secondary)" }} title={fmtDate(conv.created_at)}>
-        {relativeTime(conv.created_at)}
-      </div>
-
-      <style>{`@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`}</style>
     </div>
   );
 }
 
-const STATUS_OPTIONS = ["all", "success", "failed", "processing", "pending"];
-
 export default function HistoryPage() {
   const navigate = useNavigate();
-  const [items,  setItems]  = useState([]);
-  const [total,  setTotal]  = useState(0);
-  const [offset, setOffset] = useState(0);
-  const [status, setStatus] = useState("all");
+  const [items,   setItems]   = useState([]);
+  const [total,   setTotal]   = useState(0);
+  const [offset,  setOffset]  = useState(0);
+  const [status,  setStatus]  = useState("all");
   const [loading, setLoading] = useState(true);
-  const [error,   setError]  = useState(null);
+  const [error,   setError]   = useState(null);
   const LIMIT = 24;
 
   const load = useCallback(async (reset = false) => {
@@ -139,7 +161,7 @@ export default function HistoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [offset, status]);
+  }, [offset, status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     setOffset(0);
@@ -150,76 +172,111 @@ export default function HistoryPage() {
 
   const hasMore = items.length < total;
 
+  const filterBtnStyle = (s) => ({
+    padding: "5px 12px",
+    borderRadius: "var(--radius-full)",
+    border: `1px solid ${status === s ? "var(--accent)" : "var(--border-subtle)"}`,
+    background: status === s ? "var(--status-info-bg)" : "transparent",
+    color: status === s ? "var(--accent-bright)" : "var(--text-secondary)",
+    fontSize: "var(--text-xs)", fontWeight: 600,
+    cursor: "pointer", textTransform: s !== "all" ? "capitalize" : undefined,
+    transition: "all var(--transition-fast)",
+  });
+
   return (
-    <div style={{ maxWidth: 1100, margin: "0 auto", padding: "36px 24px" }}>
-      {/* Header */}
-      <div style={{ marginBottom: 28 }}>
-        <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-.02em", background: "linear-gradient(135deg, #F1F5F9 30%, #818CF8 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", marginBottom: 6 }}>
-          Conversion History
-        </h1>
-        <p style={{ fontSize: 13, color: "var(--text-secondary)" }}>
-          {total} total conversions
-        </p>
-      </div>
+    <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+      <PageHeader
+        eyebrow="History"
+        title="Conversion History"
+        subtitle={`${total} total conversions`}
+      />
 
-      {/* Filter bar */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap", alignItems: "center" }}>
-        {STATUS_OPTIONS.map(s => (
-          <button
-            key={s}
-            onClick={() => setStatus(s)}
-            className={`btn ${s === status ? "btn-primary" : "btn-secondary"}`}
-            style={{ fontSize: 12, padding: "6px 14px", textTransform: s !== "all" ? "capitalize" : undefined }}
-          >
-            {s === "all" ? "All" : s}
-          </button>
-        ))}
-      </div>
-
-      {/* Error */}
-      {error && (
-        <div className="card" style={{ padding: 16, color: "var(--error)", background: "var(--error-light)", border: "1px solid var(--error)", marginBottom: 20 }}>
-          {error}
+      <div style={{ padding: "20px 40px", flex: 1 }}>
+        {/* Filter bar */}
+        <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap", alignItems: "center" }}>
+          {STATUS_OPTIONS.map(s => (
+            <button key={s} onClick={() => setStatus(s)} style={filterBtnStyle(s)}>
+              {s === "all" ? "All" : s}
+            </button>
+          ))}
         </div>
-      )}
 
-      {/* Grid */}
-      {items.length === 0 && !loading ? (
-        <div style={{ textAlign: "center", padding: "80px 0", color: "var(--text-secondary)" }}>
-          <div style={{ fontSize: 32, marginBottom: 12 }}>📭</div>
-          <div>No conversions yet. Run one from the{" "}
-            <button className="btn btn-ghost" style={{ fontSize: 13, padding: "2px 4px" }} onClick={() => navigate("/")}>Convert page</button>.
+        {/* Error */}
+        {error && (
+          <div style={{
+            padding: "12px 16px", marginBottom: 16,
+            background: "var(--status-error-bg)",
+            border: "1px solid var(--status-error)",
+            borderLeft: "3px solid var(--status-error)",
+            borderRadius: "var(--radius-md)",
+            color: "var(--status-error)", fontSize: "var(--text-sm)",
+          }}>
+            {error}
           </div>
-        </div>
-      ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14, marginBottom: 24 }}>
-          {items.map(conv => (
-            <ConversionCard
-              key={conv.id}
-              conv={conv}
-              onClick={() => navigate(`/history/${conv.id}`)}
-            />
-          ))}
-        </div>
-      )}
+        )}
 
-      {/* Loading skeleton */}
-      {loading && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 }}>
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="card" style={{ height: 120, opacity: 0.4, background: "var(--bg-elevated)" }} />
-          ))}
-        </div>
-      )}
+        {/* Empty state */}
+        {items.length === 0 && !loading && (
+          <EmptyState
+            icon={<IconHistory size={48} />}
+            title="No conversions yet"
+            subtitle="Run a conversion from the Convert page."
+            action={
+              <button
+                onClick={() => navigate("/")}
+                style={{
+                  background: "linear-gradient(135deg, #2563EB, #7C3AED)",
+                  color: "#fff", border: "none",
+                  borderRadius: "var(--radius-md)",
+                  padding: "8px 20px", fontSize: "var(--text-sm)",
+                  fontWeight: 600, cursor: "pointer",
+                }}
+              >
+                Go to Convert
+              </button>
+            }
+          />
+        )}
 
-      {/* Load more */}
-      {hasMore && !loading && (
-        <div style={{ textAlign: "center", marginTop: 8 }}>
-          <button className="btn btn-secondary" onClick={() => load(false)}>
-            Load more ({total - items.length} remaining)
-          </button>
-        </div>
-      )}
+        {/* Loading skeleton */}
+        {loading && items.length === 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)}
+          </div>
+        )}
+
+        {/* Grid */}
+        {items.length > 0 && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 10, marginBottom: 20 }}>
+            {items.map(conv => (
+              <ConversionCard
+                key={conv.id}
+                conv={conv}
+                onClick={() => navigate(`/history/${conv.id}`)}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Load more */}
+        {hasMore && !loading && (
+          <div style={{ textAlign: "center", marginTop: 8 }}>
+            <button
+              onClick={() => load(false)}
+              style={{
+                background: "transparent",
+                border: "1px solid var(--border-subtle)",
+                color: "var(--text-secondary)",
+                borderRadius: "var(--radius-md)",
+                padding: "8px 20px", fontSize: "var(--text-sm)",
+                cursor: "pointer",
+              }}
+            >
+              Load more ({total - items.length} remaining)
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

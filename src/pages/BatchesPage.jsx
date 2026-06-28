@@ -1,6 +1,9 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { listBatches, getBatch } from "../api/client";
+import PageHeader from "../components/PageHeader";
+import EmptyState from "../components/EmptyState";
+import { IconBatch, IconSpinner } from "../components/Icons";
 
 function fmtDate(iso) {
   if (!iso) return "—";
@@ -10,93 +13,125 @@ function fmtDate(iso) {
   });
 }
 
-function ProgressBar({ value, total, color = "var(--accent)" }) {
+function ProgressBar({ value, total, shimmer = false }) {
   const pct = total > 0 ? Math.round((value / total) * 100) : 0;
   return (
-    <div style={{ height: 4, background: "var(--border)", borderRadius: 2, overflow: "hidden", marginTop: 6 }}>
-      <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 2, transition: "width .3s ease" }} />
+    <div style={{ height: 6, background: "var(--bg-raised)", borderRadius: "var(--radius-full)", overflow: "hidden", marginTop: 8 }}>
+      <div style={{
+        height: "100%", width: `${pct}%`,
+        background: shimmer
+          ? "linear-gradient(90deg, var(--accent), var(--status-teal))"
+          : "var(--status-success)",
+        borderRadius: "var(--radius-full)",
+        transition: "width .3s ease",
+        backgroundSize: shimmer ? "200% 100%" : undefined,
+        animation: shimmer ? "shimmer 1.5s ease infinite" : undefined,
+      }} />
     </div>
   );
 }
 
-function StatusPill({ count, label, color }) {
-  if (!count) return null;
-  return (
-    <span style={{ fontSize: 11, fontWeight: 700, color, marginRight: 8 }}>
-      {count} {label}
-    </span>
-  );
-}
-
 function BatchCard({ batch, onClick, isOpen }) {
-  const done = (batch.completed_count || 0) + (batch.failed_count || 0);
-  const total = batch.total_files || 0;
-  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-  const isActive = batch.status === "processing";
+  const completed = batch.completed_files || 0;
+  const failed    = batch.failed_files    || 0;
+  const done      = completed + failed;
+  const total     = batch.total_files || 0;
+  const isActive  = batch.status === "processing";
 
   const statusColor = {
-    completed: "var(--success)",
-    processing: "var(--accent)",
-    failed:     "var(--error)",
-    pending:    "var(--text-secondary)",
-  }[batch.status] || "var(--text-secondary)";
+    complete:   "var(--status-success)",
+    partial:    "var(--status-warn)",
+    processing: "var(--status-info)",
+    failed:     "var(--status-error)",
+    pending:    "var(--status-neutral)",
+  }[batch.status] || "var(--status-neutral)";
+
+  const accentColor = statusColor;
 
   return (
     <div
-      className="card"
-      style={{ overflow: "hidden", cursor: "pointer", border: isOpen ? "1px solid var(--accent-border)" : undefined }}
+      style={{
+        background: "var(--bg-surface)",
+        border: `1px solid ${isOpen ? "var(--border-default)" : "var(--border-subtle)"}`,
+        borderRadius: "var(--radius-lg)",
+        overflow: "hidden",
+        cursor: "pointer",
+        transition: "all var(--transition-fast)",
+        position: "relative",
+      }}
       onClick={onClick}
     >
-      <div style={{ padding: "14px 18px" }}>
+      {/* Left accent */}
+      <div style={{
+        position: "absolute", left: 0, top: 0, bottom: 0, width: 3,
+        background: accentColor,
+      }} />
+
+      <div style={{ padding: "14px 18px 14px 20px" }}>
         {/* Top row */}
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, marginBottom: 6 }}>
           <div>
-            <div style={{ fontWeight: 700, fontSize: 13, color: "var(--text-primary)", marginBottom: 2 }}>
+            <div style={{ fontWeight: 600, fontSize: "var(--text-md)", color: "var(--text-primary)", marginBottom: 2 }}>
               {batch.name}
             </div>
-            <div style={{ fontSize: 10, color: "var(--text-secondary)", fontFamily: "var(--mono)" }}>
+            <div style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", fontFamily: "var(--font-mono)" }}>
               {batch.id?.slice(0, 12)}…
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
             {isActive && (
-              <span style={{ fontSize: 10, color: "var(--accent)", animation: "pulse 1.5s ease-in-out infinite" }}>
+              <span className="pulse" style={{ fontSize: "var(--text-xs)", color: "var(--status-info)" }}>
                 ● LIVE
               </span>
             )}
-            <span style={{ fontSize: 12, color: statusColor, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".04em" }}>
+            <span style={{ fontSize: "var(--text-xs)", color: statusColor, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>
               {batch.status}
             </span>
           </div>
         </div>
 
         {/* Progress */}
-        <div style={{ fontSize: 11, color: "var(--text-secondary)", marginBottom: 2 }}>
-          {done} / {total} files · {pct}%
+        <div style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", marginBottom: 2 }}>
+          {done} / {total} file{total !== 1 ? "s" : ""}
+          {total > 0 && ` · ${Math.round((done / total) * 100)}%`}
         </div>
-        <ProgressBar
-          value={done}
-          total={total}
-          color={batch.status === "failed" ? "var(--error)" : batch.status === "completed" ? "var(--success)" : "var(--accent)"}
-        />
+        <ProgressBar value={done} total={total} shimmer={isActive} />
 
-        {/* Status pills */}
-        <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap" }}>
-          <StatusPill count={batch.completed_count} label="done" color="var(--success)" />
-          <StatusPill count={batch.failed_count}    label="failed" color="var(--error)" />
-          <StatusPill count={batch.processing_count} label="processing" color="var(--accent)" />
-          <StatusPill count={batch.pending_count}   label="pending" color="var(--text-secondary)" />
+        {/* Stats pills */}
+        <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 8 }}>
+          {completed > 0 && (
+            <span style={{ fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--status-success)" }}>
+              {completed} done
+            </span>
+          )}
+          {failed > 0 && (
+            <span style={{ fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--status-error)" }}>
+              {failed} failed
+            </span>
+          )}
+          {total - done > 0 && isActive && (
+            <span style={{ fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--status-info)" }}>
+              {total - done} remaining
+            </span>
+          )}
         </div>
 
         {/* Date */}
-        <div style={{ marginTop: 8, fontSize: 10, color: "var(--text-secondary)" }}>
+        <div style={{ marginTop: 8, fontSize: "var(--text-xs)", color: "var(--text-tertiary)" }}>
           {fmtDate(batch.created_at)}
           {batch.completed_at && ` → ${fmtDate(batch.completed_at)}`}
         </div>
       </div>
 
       {/* Expand indicator */}
-      <div style={{ borderTop: "1px solid var(--border)", padding: "6px 18px", background: isOpen ? "var(--accent-light)" : undefined, fontSize: 11, color: isOpen ? "var(--accent)" : "var(--text-secondary)", textAlign: "center" }}>
+      <div style={{
+        borderTop: "1px solid var(--border-subtle)",
+        padding: "6px 18px",
+        background: isOpen ? "var(--status-info-bg)" : undefined,
+        fontSize: "var(--text-xs)",
+        color: isOpen ? "var(--accent-bright)" : "var(--text-tertiary)",
+        textAlign: "center",
+      }}>
         {isOpen ? "▲ Hide conversions" : "▼ Show conversions"}
       </div>
     </div>
@@ -105,7 +140,7 @@ function BatchCard({ batch, onClick, isOpen }) {
 
 function BatchDetail({ batchId }) {
   const navigate = useNavigate();
-  const [detail, setDetail] = useState(null);
+  const [detail,  setDetail]  = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -115,34 +150,56 @@ function BatchDetail({ batchId }) {
       .finally(() => setLoading(false));
   }, [batchId]);
 
-  if (loading) return <div style={{ padding: "14px 18px", color: "var(--text-secondary)", fontSize: 12 }}>Loading…</div>;
-  if (!detail?.conversions?.length) return <div style={{ padding: "14px 18px", color: "var(--text-secondary)", fontSize: 12 }}>No conversions yet.</div>;
+  if (loading) return (
+    <div style={{ padding: "14px 18px", color: "var(--text-tertiary)", fontSize: "var(--text-sm)", display: "flex", gap: 6 }}>
+      <IconSpinner size={13} color="var(--accent)" /> Loading…
+    </div>
+  );
+  if (!detail?.conversions?.length) return (
+    <div style={{ padding: "14px 18px", color: "var(--text-tertiary)", fontSize: "var(--text-sm)" }}>
+      No conversions yet.
+    </div>
+  );
+
+  const statusColors = {
+    success:    "var(--status-success)",
+    failed:     "var(--status-error)",
+    processing: "var(--status-info)",
+    pending:    "var(--status-neutral)",
+  };
 
   return (
-    <div style={{ borderTop: "1px solid var(--border)", maxHeight: 320, overflowY: "auto" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+    <div style={{ borderTop: "1px solid var(--border-subtle)", maxHeight: 320, overflowY: "auto" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--text-sm)" }}>
         <thead>
-          <tr style={{ background: "var(--bg-elevated)" }}>
+          <tr style={{ background: "var(--bg-raised)" }}>
             {["Filename", "Status", "Type", "Created"].map(h => (
-              <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontWeight: 600, color: "var(--text-secondary)", fontSize: 10, textTransform: "uppercase", letterSpacing: ".05em", borderBottom: "1px solid var(--border)", whiteSpace: "nowrap" }}>{h}</th>
+              <th key={h} style={{
+                padding: "8px 12px", textAlign: "left", fontWeight: 600,
+                color: "var(--text-tertiary)", fontSize: "var(--text-xs)",
+                textTransform: "uppercase", letterSpacing: "0.08em",
+                borderBottom: "1px solid var(--border-subtle)", whiteSpace: "nowrap",
+              }}>
+                {h}
+              </th>
             ))}
           </tr>
         </thead>
         <tbody>
           {detail.conversions.map(c => {
-            const statusColor = { success: "var(--success)", failed: "var(--error)", processing: "var(--accent)", pending: "var(--text-secondary)" }[c.status];
+            const statusColor = statusColors[c.status] || "var(--status-neutral)";
             return (
               <tr
                 key={c.id}
                 onClick={() => navigate(`/history/${c.id}`)}
-                style={{ cursor: "pointer", borderBottom: "1px solid var(--border)" }}
-                onMouseEnter={e => e.currentTarget.style.background = "rgba(99,102,241,.05)"}
+                style={{ cursor: "pointer", borderBottom: "1px solid var(--border-subtle)" }}
+                onMouseEnter={e => e.currentTarget.style.background = "var(--bg-raised)"}
                 onMouseLeave={e => e.currentTarget.style.background = ""}
               >
-                <td style={{ padding: "7px 12px", fontFamily: "var(--mono)", color: "var(--text)", wordBreak: "break-all" }}>{c.filename}</td>
-                <td style={{ padding: "7px 12px", color: statusColor, fontWeight: 700, textTransform: "uppercase", fontSize: 10, letterSpacing: ".04em" }}>{c.status}</td>
-                <td style={{ padding: "7px 12px", color: "var(--text-secondary)" }}>{c.transaction_type || "—"}</td>
-                <td style={{ padding: "7px 12px", color: "var(--text-secondary)", whiteSpace: "nowrap" }}>{fmtDate(c.created_at)}</td>
+                <td style={{ padding: "7px 12px", fontFamily: "var(--font-mono)", color: "var(--text-code)", wordBreak: "break-all" }}>{c.filename}</td>
+                <td style={{ padding: "7px 12px", color: statusColor, fontWeight: 600, textTransform: "uppercase", fontSize: "var(--text-xs)", letterSpacing: "0.05em" }}>{c.status}</td>
+                <td style={{ padding: "7px 12px", color: "var(--text-tertiary)" }}>{c.transaction_type || "—"}</td>
+                <td style={{ padding: "7px 12px", color: "var(--text-tertiary)", whiteSpace: "nowrap" }}>{fmtDate(c.created_at)}</td>
               </tr>
             );
           })}
@@ -153,7 +210,7 @@ function BatchDetail({ batchId }) {
 }
 
 export default function BatchesPage() {
-  const navigate         = useNavigate();
+  const navigate          = useNavigate();
   const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState(null);
@@ -192,62 +249,106 @@ export default function BatchesPage() {
   }
 
   return (
-    <div style={{ maxWidth: 860, margin: "0 auto", padding: "36px 24px" }}>
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28, flexWrap: "wrap", gap: 12 }}>
-        <div>
-          <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-.02em", background: "linear-gradient(135deg, #F1F5F9 30%, #818CF8 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", marginBottom: 6 }}>
-            Batch Jobs
-          </h1>
-          <p style={{ fontSize: 13, color: "var(--text-secondary)" }}>
-            {batches.length} batch{batches.length !== 1 ? "es" : ""} total
-          </p>
-        </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button className="btn btn-secondary" onClick={load} style={{ fontSize: 12 }}>⟳ Refresh</button>
-          <button className="btn btn-primary" onClick={() => navigate("/")} style={{ fontSize: 12 }}>+ New Batch</button>
-        </div>
-      </div>
+    <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+      <PageHeader
+        eyebrow="Batches"
+        title="Batch Jobs"
+        subtitle={`${batches.length} batch${batches.length !== 1 ? "es" : ""} total`}
+        actions={
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              onClick={load}
+              style={{
+                background: "transparent", border: "1px solid var(--border-subtle)",
+                color: "var(--text-secondary)", borderRadius: "var(--radius-md)",
+                padding: "6px 12px", fontSize: "var(--text-sm)", cursor: "pointer",
+              }}
+            >
+              ⟳ Refresh
+            </button>
+            <button
+              onClick={() => navigate("/")}
+              style={{
+                background: "linear-gradient(135deg, #2563EB, #7C3AED)",
+                color: "#fff", border: "none", borderRadius: "var(--radius-md)",
+                padding: "6px 14px", fontSize: "var(--text-sm)", fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              + New Batch
+            </button>
+          </div>
+        }
+      />
 
-      {error && (
-        <div className="card" style={{ padding: 14, color: "var(--error)", background: "var(--error-light)", border: "1px solid var(--error)", marginBottom: 20, fontSize: 13 }}>
-          {error}
-        </div>
-      )}
+      <div style={{ padding: "20px 40px", flex: 1 }}>
+        {error && (
+          <div style={{
+            padding: "12px 16px", marginBottom: 16,
+            background: "var(--status-error-bg)",
+            border: "1px solid var(--status-error)",
+            borderRadius: "var(--radius-md)",
+            color: "var(--status-error)", fontSize: "var(--text-sm)",
+          }}>
+            {error}
+          </div>
+        )}
 
-      {loading && batches.length === 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="card" style={{ height: 96, opacity: 0.4, background: "var(--bg-elevated)" }} />
+        {/* Loading skeletons */}
+        {loading && batches.length === 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} style={{
+                height: 120, background: "var(--bg-surface)",
+                border: "1px solid var(--border-subtle)",
+                borderRadius: "var(--radius-lg)",
+                opacity: 0.5,
+              }} className="shimmer-bar" />
+            ))}
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!loading && batches.length === 0 && (
+          <EmptyState
+            icon={<IconBatch size={48} />}
+            title="No batches yet"
+            subtitle="Upload files from the Convert page."
+            action={
+              <button
+                onClick={() => navigate("/")}
+                style={{
+                  background: "linear-gradient(135deg, #2563EB, #7C3AED)",
+                  color: "#fff", border: "none", borderRadius: "var(--radius-md)",
+                  padding: "8px 20px", fontSize: "var(--text-sm)", fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Go to Convert
+              </button>
+            }
+          />
+        )}
+
+        {/* Batch list */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {batches.map(batch => (
+            <div key={batch.id} style={{
+              background: "var(--bg-surface)",
+              border: "1px solid var(--border-subtle)",
+              borderRadius: "var(--radius-lg)",
+              overflow: "hidden",
+            }}>
+              <BatchCard
+                batch={batch}
+                onClick={() => toggle(batch.id)}
+                isOpen={openId === batch.id}
+              />
+              {openId === batch.id && <BatchDetail batchId={batch.id} />}
+            </div>
           ))}
         </div>
-      )}
-
-      {!loading && batches.length === 0 && (
-        <div style={{ textAlign: "center", padding: "80px 0", color: "var(--text-secondary)" }}>
-          <div style={{ fontSize: 32, marginBottom: 12 }}>📦</div>
-          <div>No batches yet. Upload files from the{" "}
-            <button className="btn btn-ghost" style={{ fontSize: 13, padding: "2px 4px" }} onClick={() => navigate("/")}>Convert page</button>.
-          </div>
-        </div>
-      )}
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {batches.map(batch => (
-          <div key={batch.id}>
-            <BatchCard
-              batch={batch}
-              onClick={() => toggle(batch.id)}
-              isOpen={openId === batch.id}
-            />
-            {openId === batch.id && <BatchDetail batchId={batch.id} />}
-          </div>
-        ))}
       </div>
-
-      <style>{`
-        @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:.4 } }
-      `}</style>
     </div>
   );
 }

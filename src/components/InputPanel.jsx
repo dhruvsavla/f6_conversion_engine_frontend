@@ -1,16 +1,17 @@
 import { useRef, useState } from "react";
+import { IconUpload, IconSpinner } from './Icons';
 
 const TX_TYPES = [
-  { value: "RETAIL",         label: "Retail pharmacy claim (B1)" },
-  { value: "SPECIALTY",      label: "Specialty / high cost therapy (B1)" },
-  { value: "CONTROLLED",     label: "Controlled substance — DUR (B1)" },
-  { value: "COB",            label: "Coordination of benefits (B1+COB)" },
-  { value: "REVERSAL",       label: "Claim reversal (B2)" },
-  { value: "COMPOUND",       label: "Compound prescription (B1+CMP)" },
-  { value: "LTC",            label: "Long-term care (B1)" },
-  { value: "MEDICARE_PART_D",label: "Medicare Part D (B1)" },
-  { value: "ELIGIBILITY",    label: "Eligibility verification (E1)" },
-  { value: "PRIOR_AUTH",     label: "Prior authorization (PA)" },
+  { value: "RETAIL",          label: "Retail pharmacy claim (B1)" },
+  { value: "SPECIALTY",       label: "Specialty / high cost therapy (B1)" },
+  { value: "CONTROLLED",      label: "Controlled substance — DUR (B1)" },
+  { value: "COB",             label: "Coordination of benefits (B1+COB)" },
+  { value: "REVERSAL",        label: "Claim reversal (B2)" },
+  { value: "COMPOUND",        label: "Compound prescription (B1+CMP)" },
+  { value: "LTC",             label: "Long-term care (B1)" },
+  { value: "MEDICARE_PART_D", label: "Medicare Part D (B1)" },
+  { value: "ELIGIBILITY",     label: "Eligibility verification (E1)" },
+  { value: "PRIOR_AUTH",      label: "Prior authorization (PA)" },
 ];
 
 function isHexBuffer(buffer) {
@@ -28,7 +29,7 @@ function decodeHexPreview(buffer) {
 
 export default function InputPanel({ onConvert, onConvertHex, onBatch, onLoadSample, converting }) {
   const [text, setText] = useState("");
-  const [hexMeta, setHexMeta] = useState(null);   // {name, size, bytes: ArrayBuffer}
+  const [hexMeta, setHexMeta] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
   const [sampleType, setSampleType] = useState("RETAIL");
   const [dragging, setDragging] = useState(false);
@@ -66,7 +67,6 @@ export default function InputPanel({ onConvert, onConvertHex, onBatch, onLoadSam
 
   const isHexMode = hexMeta !== null;
   const canConvert = !converting && (text.trim().length > 0 || isHexMode);
-  // Batch only makes sense for pipe-format text (not binary hex streams)
   const canBatch = !converting && !isHexMode && text.trim().length > 0;
 
   function handleConvertClick() {
@@ -79,27 +79,34 @@ export default function InputPanel({ onConvert, onConvertHex, onBatch, onLoadSam
   }
 
   return (
-    <div style={{ maxWidth: 860, margin: "0 auto", padding: "40px 24px" }}>
-      <div style={{ marginBottom: 32 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: "-.03em", marginBottom: 8, background: "linear-gradient(135deg, #F1F5F9 30%, #818CF8 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-          NCPDP D.0 → F6 Converter
-        </h1>
-        <p style={{ color: "var(--text-secondary)", fontSize: 14, lineHeight: 1.6, maxWidth: 580 }}>
-          Paste a D.0 transaction below, or upload a pipe-delimited .txt file or a binary NCPDP hex stream.
-          The agent reads the rules folder, converts automatically, and audits every field decision.
-        </p>
-      </div>
-
-      <div className="card" style={{ padding: 24, marginBottom: 16 }}>
+    <div style={{ width: "100%" }}>
+      {/* Textarea card */}
+      <div style={{
+        background: "var(--bg-surface)",
+        border: "1px solid var(--border-subtle)",
+        borderRadius: "var(--radius-md)",
+        overflow: "hidden",
+      }}>
         {/* Label row */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-          <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".05em", color: "var(--text-secondary)" }}>
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "10px 16px",
+          background: "var(--bg-raised)",
+          borderBottom: "1px solid var(--border-subtle)",
+        }}>
+          <span style={{ fontSize: "var(--text-xs)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-secondary)" }}>
             D.0 Transaction
           </span>
           <button
             onClick={() => fileRef.current.click()}
-            style={{ fontSize: 12, background: "none", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", padding: "3px 10px", cursor: "pointer", color: "var(--text-secondary)" }}
+            style={{
+              display: "flex", alignItems: "center", gap: 5,
+              fontSize: "var(--text-xs)", background: "none",
+              border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-sm)",
+              padding: "3px 10px", cursor: "pointer", color: "var(--text-secondary)",
+            }}
           >
+            <IconUpload size={11} />
             Upload file
           </button>
           <input
@@ -114,57 +121,48 @@ export default function InputPanel({ onConvert, onConvertHex, onBatch, onLoadSam
         {/* Hex mode banner */}
         {isHexMode ? (
           <div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                padding: "12px 16px",
-                background: "var(--accent-light)",
-                border: "1.5px solid var(--accent-border)",
-                borderRadius: "var(--radius)",
-                borderBottomLeftRadius: showPreview ? 0 : undefined,
-                borderBottomRightRadius: showPreview ? 0 : undefined,
-              }}
-            >
-              <span style={{ fontSize: 18 }}>⬡</span>
+            <div style={{
+              display: "flex", alignItems: "center", gap: 12,
+              padding: "12px 16px",
+              background: "var(--status-info-bg)",
+              border: "1px solid var(--status-info)",
+              borderRadius: 0,
+            }}>
+              <span style={{ fontSize: 16, color: "var(--status-teal)" }}>⬡</span>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--cyan)" }}>Binary hex format detected</div>
-                <div style={{ fontSize: 11, color: "rgba(34,211,238,.6)", fontFamily: "var(--mono)" }}>
+                <div style={{ fontSize: "var(--text-sm)", fontWeight: 600, color: "var(--status-teal)" }}>Binary hex format detected</div>
+                <div style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", fontFamily: "var(--font-mono)" }}>
                   {hexMeta.name} · {hexMeta.size.toLocaleString()} bytes
                 </div>
               </div>
               <button
                 onClick={() => setShowPreview(v => !v)}
-                style={{ fontSize: 11, background: "rgba(99,102,241,.18)", border: "1px solid var(--accent-border)", borderRadius: "var(--radius-sm)", padding: "4px 10px", cursor: "pointer", color: "var(--cyan)" }}
+                style={{
+                  fontSize: "var(--text-xs)", background: "var(--status-teal-bg)",
+                  border: "1px solid var(--status-teal)", borderRadius: "var(--radius-sm)",
+                  padding: "4px 10px", cursor: "pointer", color: "var(--status-teal)",
+                }}
               >
                 {showPreview ? "Hide preview" : "Preview decoded"}
               </button>
               <button
                 onClick={clearAll}
-                style={{ fontSize: 11, background: "rgba(255,255,255,.06)", border: "none", borderRadius: 4, padding: "4px 10px", color: "rgba(255,255,255,.4)", cursor: "pointer" }}
+                style={{
+                  fontSize: "var(--text-xs)", background: "transparent",
+                  border: "none", padding: "4px 10px", color: "var(--text-tertiary)", cursor: "pointer",
+                }}
               >
                 clear
               </button>
             </div>
             {showPreview && (
-              <pre
-                style={{
-                  margin: 0,
-                  padding: "12px 16px",
-                  background: "var(--bg-code)",
-                  border: "1.5px solid var(--accent-border)",
-                  borderTop: "1px solid rgba(99,102,241,.2)",
-                  borderRadius: "0 0 var(--radius) var(--radius)",
-                  fontFamily: "var(--mono)",
-                  fontSize: 11,
-                  color: "var(--cyan)",
-                  maxHeight: 200,
-                  overflowY: "auto",
-                  whiteSpace: "pre-wrap",
-                  wordBreak: "break-all",
-                }}
-              >
+              <pre style={{
+                margin: 0, padding: "12px 16px",
+                background: "var(--bg-code)",
+                fontFamily: "var(--font-mono)", fontSize: "var(--text-sm)",
+                color: "var(--status-teal)", maxHeight: 200,
+                overflowY: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all",
+              }}>
                 {decodeHexPreview(hexMeta.bytes)}
               </pre>
             )}
@@ -183,27 +181,28 @@ export default function InputPanel({ onConvert, onConvertHex, onBatch, onLoadSam
               placeholder={"HDR|101-A1=610279|102-A2=D0|103-A3=B1|...\nINS|302-C2=ZH48291045|301-C1=RXGRP88|...\n\nPaste a D.0 transaction or drag & drop a .txt/.dat file here."}
               spellCheck={false}
               style={{
-                width: "100%",
-                minHeight: 220,
+                width: "100%", minHeight: 220,
                 padding: "14px 16px",
-                fontFamily: "var(--mono)",
-                fontSize: 12,
+                fontFamily: "var(--font-mono)", fontSize: "var(--text-sm)",
                 lineHeight: 1.7,
-                background: dragging ? "rgba(99,102,241,.08)" : "var(--bg-code)",
+                background: dragging ? "var(--status-info-bg)" : "var(--bg-code)",
                 color: "var(--text-code)",
-                border: `1.5px solid ${dragging ? "var(--accent)" : "rgba(255,255,255,.08)"}`,
-                borderRadius: "var(--radius)",
-                resize: "vertical",
-                outline: "none",
-                transition: "border-color .2s",
+                border: `1.5px solid ${dragging ? "var(--accent)" : "transparent"}`,
+                borderRadius: 0, resize: "vertical", outline: "none",
+                transition: "border-color var(--transition-normal)",
               }}
-              onFocus={e => { e.target.style.borderColor = "rgba(99,102,241,.5)"; }}
-              onBlur={e => { e.target.style.borderColor = "rgba(255,255,255,.08)"; }}
+              onFocus={e => { e.target.style.borderColor = "var(--border-focus)"; }}
+              onBlur={e => { e.target.style.borderColor = "transparent"; }}
             />
             {text && (
               <button
                 onClick={clearAll}
-                style={{ position: "absolute", top: 8, right: 8, background: "rgba(255,255,255,.1)", border: "none", borderRadius: 4, padding: "2px 8px", color: "rgba(255,255,255,.5)", fontSize: 11, cursor: "pointer" }}
+                style={{
+                  position: "absolute", top: 8, right: 8,
+                  background: "var(--bg-raised)", border: "1px solid var(--border-subtle)",
+                  borderRadius: "var(--radius-sm)", padding: "2px 8px",
+                  color: "var(--text-tertiary)", fontSize: "var(--text-xs)", cursor: "pointer",
+                }}
               >
                 clear
               </button>
@@ -211,58 +210,114 @@ export default function InputPanel({ onConvert, onConvertHex, onBatch, onLoadSam
           </div>
         )}
 
-        {/* Char / byte count */}
-        <div style={{ marginTop: 8, fontSize: 11, color: "var(--text-secondary)", display: "flex", gap: 12 }}>
-          {isHexMode ? (
-            <span>Binary NCPDP hex stream · separators: FS=0x1C GS=0x1D RS=0x1E (latin-1 encoded)</span>
-          ) : text ? (
-            <span>{text.split("\n").filter(l => l.trim()).length} segments · {text.length.toLocaleString()} chars</span>
-          ) : (
-            <span>Supports pipe-delimited format: SEGMENT|field_id=value|... · or drop a binary hex file</span>
-          )}
+        {/* Char / byte count + bottom toolbar */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "8px 16px",
+          background: "var(--bg-raised)",
+          borderTop: "1px solid var(--border-subtle)",
+        }}>
+          <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)" }}>
+            {isHexMode ? (
+              "Binary NCPDP hex stream · separators: FS=0x1C GS=0x1D RS=0x1E"
+            ) : text ? (
+              `${text.split("\n").filter(l => l.trim()).length} segments · ${text.length.toLocaleString()} chars`
+            ) : (
+              "Supports pipe-delimited format: SEGMENT|field_id=value|..."
+            )}
+          </span>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            {/* Sample type selector */}
+            <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)" }}>Load sample:</span>
+            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+              {TX_TYPES.slice(0, 4).map(t => (
+                <button
+                  key={t.value}
+                  onClick={() => setSampleType(t.value)}
+                  style={{
+                    padding: "2px 8px",
+                    borderRadius: "var(--radius-full)",
+                    border: `1px solid ${sampleType === t.value ? "var(--accent)" : "var(--border-subtle)"}`,
+                    background: sampleType === t.value ? "var(--status-info-bg)" : "transparent",
+                    color: sampleType === t.value ? "var(--accent-bright)" : "var(--text-secondary)",
+                    fontSize: "var(--text-xs)", cursor: "pointer",
+                    transition: "all var(--transition-fast)",
+                  }}
+                >
+                  {t.value}
+                </button>
+              ))}
+              <select
+                value={sampleType}
+                onChange={e => setSampleType(e.target.value)}
+                style={{
+                  padding: "2px 6px", borderRadius: "var(--radius-sm)",
+                  border: "1px solid var(--border-subtle)", fontSize: "var(--text-xs)",
+                  background: "var(--bg-input)", color: "var(--text-secondary)",
+                }}
+              >
+                {TX_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+            </div>
+            <button
+              onClick={() => onLoadSample(sampleType, setText)}
+              style={{
+                padding: "3px 10px",
+                borderRadius: "var(--radius-sm)",
+                border: "1px solid var(--border-subtle)",
+                background: "transparent",
+                color: "var(--text-secondary)",
+                fontSize: "var(--text-xs)", cursor: "pointer",
+              }}
+            >
+              Load
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Action row */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
         <button
-          className="btn btn-primary"
           onClick={handleConvertClick}
           disabled={!canConvert}
-          style={{ padding: "10px 28px", fontSize: 15 }}
+          style={{
+            display: "flex", alignItems: "center", gap: 8,
+            background: canConvert ? "linear-gradient(135deg, #2563EB, #7C3AED)" : "var(--bg-raised)",
+            color: canConvert ? "#fff" : "var(--text-tertiary)",
+            border: "none", borderRadius: "var(--radius-md)",
+            height: 44, padding: "0 28px",
+            fontSize: "var(--text-md)", fontWeight: 600,
+            cursor: canConvert ? "pointer" : "not-allowed",
+            boxShadow: canConvert ? "0 4px 20px rgba(59,130,246,0.4)" : "none",
+            transition: "all var(--transition-normal)",
+            opacity: canConvert ? 1 : 0.5,
+          }}
         >
           {converting ? (
-            <><span style={{ display: "inline-block", animation: "spin 1s linear infinite" }}>⟳</span> Converting…</>
+            <><IconSpinner size={14} color="#fff" /> Converting…</>
           ) : "Convert to F6 →"}
         </button>
 
-        {/* Batch button — pipe mode only; disabled for hex streams */}
         <button
-          className="btn btn-secondary"
           onClick={() => canBatch && onBatch && onBatch(text)}
           disabled={!canBatch}
           title="Process as multi-claim batch (claims separated by blank lines)"
-          style={{ padding: "10px 20px", fontSize: 14 }}
+          style={{
+            height: 44, padding: "0 20px",
+            background: "transparent",
+            border: "1px solid var(--border-subtle)",
+            color: canBatch ? "var(--text-secondary)" : "var(--text-tertiary)",
+            borderRadius: "var(--radius-md)",
+            fontSize: "var(--text-md)",
+            cursor: canBatch ? "pointer" : "not-allowed",
+            opacity: canBatch ? 1 : 0.5,
+            transition: "all var(--transition-fast)",
+          }}
         >
           Process as Batch
         </button>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>Load sample:</span>
-          <select
-            value={sampleType}
-            onChange={e => setSampleType(e.target.value)}
-            style={{ padding: "6px 8px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", fontSize: 12, background: "var(--bg-surface)", fontFamily: "var(--sans)" }}
-          >
-            {TX_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-          </select>
-          <button className="btn btn-secondary" style={{ fontSize: 12 }} onClick={() => onLoadSample(sampleType, setText)}>
-            Load
-          </button>
-        </div>
       </div>
-
-      <style>{`@keyframes spin { from { transform:rotate(0deg) } to { transform:rotate(360deg) } }`}</style>
     </div>
   );
 }
