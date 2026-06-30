@@ -18,19 +18,31 @@ function occSup(n) {
   return n > 1 ? (SUP_CHARS[n] || `^${n}`) : "";
 }
 
-function ChangeBadge({ type }) {
+function ChangeBadge({ type, isLLM }) {
   const c = CHANGE_COLOR[type] || CHANGE_COLOR.carried;
   return (
-    <span style={{
-      display: "inline-flex", alignItems: "center",
-      padding: "2px 8px", borderRadius: "var(--radius-full)",
-      background: c.bg, color: c.color,
-      fontSize: "var(--text-xs)", fontWeight: 600,
-      fontFamily: "var(--font-mono)",
-      textTransform: "uppercase", letterSpacing: "0.05em",
-      whiteSpace: "nowrap",
-    }}>
-      {type}
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+      <span style={{
+        display: "inline-flex", alignItems: "center",
+        padding: "2px 8px", borderRadius: "var(--radius-full)",
+        background: c.bg, color: c.color,
+        fontSize: "var(--text-xs)", fontWeight: 600,
+        fontFamily: "var(--font-mono)",
+        textTransform: "uppercase", letterSpacing: "0.05em",
+        whiteSpace: "nowrap",
+      }}>
+        {type}
+      </span>
+      {isLLM && (
+        <span style={{
+          display: "inline-flex", alignItems: "center",
+          padding: "2px 6px", borderRadius: "var(--radius-full)",
+          background: "var(--status-purple-bg)", color: "var(--status-purple)",
+          fontSize: "var(--text-xs)", fontWeight: 700, letterSpacing: "0.06em",
+        }}>
+          AI
+        </span>
+      )}
     </span>
   );
 }
@@ -214,7 +226,7 @@ export default function AuditTable({ entries, segmentFilter, changeTypeFilter })
           <td style={{ ...tdStyle, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}>
             <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}>{entry.field_name}</span>
           </td>
-          <td style={tdStyle}><ChangeBadge type={entry.change_type} /></td>
+          <td style={tdStyle}><ChangeBadge type={entry.change_type} isLLM={entry.rule_applied?.startsWith("LLM:")} /></td>
           <td style={{ ...tdStyle, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis" }}>
             <MonoCell dim>{entry.old_value || <span style={{ opacity: 0.35 }}>—</span>}</MonoCell>
           </td>

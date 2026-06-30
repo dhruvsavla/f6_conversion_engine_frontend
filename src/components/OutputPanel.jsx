@@ -64,7 +64,7 @@ function CodePane({ title, content, accent, auditIndex = null }) {
           }}>
             <span style={{
               minWidth: 36, textAlign: "right", paddingRight: 10,
-              color: "rgba(255,255,255,.15)", userSelect: "none", flexShrink: 0,
+              color: "var(--text-muted)", userSelect: "none", flexShrink: 0,
               fontSize: "var(--text-xs)",
             }}>
               {i + 1}

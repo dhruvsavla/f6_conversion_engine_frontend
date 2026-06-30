@@ -44,6 +44,13 @@ export const IconIngest = ({ size = 18, color }) => (
   </svg>
 );
 
+export const IconResolution = ({ size = 18, color }) => (
+  <svg {...svgProps(size, color)}>
+    <path d="M9 12l2 2 4-4M12 3a9 9 0 100 18A9 9 0 0012 3z" />
+    <path d="M12 8v1M12 15h.01" strokeWidth={2} />
+  </svg>
+);
+
 export const IconCheck = ({ size = 14, color = 'currentColor' }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
     stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
@@ -154,5 +161,12 @@ export const IconArrowRight = ({ size = 16, color = 'currentColor' }) => (
 export const IconReverse = ({ size = 18, color }) => (
   <svg {...svgProps(size, color)}>
     <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+  </svg>
+);
+
+export const IconEngine = ({ size = 18, color }) => (
+  <svg {...svgProps(size, color)}>
+    <path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18" />
+    <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
   </svg>
 );

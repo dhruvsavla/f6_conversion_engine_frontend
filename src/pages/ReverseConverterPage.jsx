@@ -1,26 +1,69 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { reverseConvert, fetchSampleF6 } from "../api/client";
 import PipelineCircuit from "../components/PipelineCircuit";
 import ValidationFindings from "../components/ValidationFindings";
 import AuditSummaryBar from "../components/AuditSummaryBar";
 import AuditTable from "../components/AuditTable";
+import ReverseOutputPanel from "../components/ReverseOutputPanel";
 import TransactionBadge from "../components/TransactionBadge";
 import PageHeader from "../components/PageHeader";
-import { IconArrowRight, IconDownload, IconSpinner } from "../components/Icons";
+import { IconArrowRight, IconUpload, IconSpinner, IconX } from "../components/Icons";
 
-const TX_SAMPLE_TYPES = ["RETAIL", "COB", "CONTROLLED"];
+const SAMPLE_TYPES = ["RETAIL", "COB", "CONTROLLED"];
+
+// Summary stat chips shown after conversion
+function StatChip({ label, value, color }) {
+  if (!value) return null;
+  return (
+    <div style={{
+      display: "flex", flexDirection: "column", alignItems: "center",
+      padding: "10px 20px",
+      background: "var(--bg-surface)",
+      border: "1px solid var(--border-subtle)",
+      borderRadius: "var(--radius-md)",
+      minWidth: 72,
+    }}>
+      <span style={{ fontSize: "var(--text-xl)", fontWeight: 700, color, lineHeight: 1 }}>{value}</span>
+      <span style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", marginTop: 3 }}>{label}</span>
+    </div>
+  );
+}
 
 export default function ReverseConverterPage() {
-  const navigate = useNavigate();
-  const [f6Text,     setF6Text]     = useState("");
-  const [result,     setResult]     = useState(null);
-  const [loading,    setLoading]    = useState(false);
-  const [error,      setError]      = useState(null);
-  const [typeFilter, setTypeFilter] = useState(null);
-  const [sampleType, setSampleType] = useState("RETAIL");
-  const [steps,      setSteps]      = useState([]);
+  const navigate  = useNavigate();
+  const fileRef   = useRef(null);
 
+  const [f6Text,      setF6Text]      = useState("");
+  const [filename,    setFilename]    = useState("manual_f6_input");
+  const [dragging,    setDragging]    = useState(false);
+  const [result,      setResult]      = useState(null);
+  const [loading,     setLoading]     = useState(false);
+  const [error,       setError]       = useState(null);
+  const [typeFilter,  setTypeFilter]  = useState(null);
+  const [sampleType,  setSampleType]  = useState("RETAIL");
+  const [steps,       setSteps]       = useState([]);
+
+  // ── File handling ──────────────────────────────────────
+  function handleFile(file) {
+    if (!file) return;
+    setFilename(file.name);
+    const reader = new FileReader();
+    reader.onload = e => {
+      setF6Text(new TextDecoder("utf-8").decode(e.target.result));
+      setResult(null);
+      setError(null);
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    setDragging(false);
+    handleFile(e.dataTransfer.files[0]);
+  }
+
+  // ── Conversion ─────────────────────────────────────────
   async function handleConvert() {
     if (!f6Text.trim()) return;
     setLoading(true);
@@ -29,7 +72,7 @@ export default function ReverseConverterPage() {
     setTypeFilter(null);
     setSteps([]);
     try {
-      const data = await reverseConvert(f6Text);
+      const data = await reverseConvert(f6Text, filename);
       setResult(data);
       if (data.agent_steps) setSteps(data.agent_steps);
     } catch (e) {
@@ -43,6 +86,7 @@ export default function ReverseConverterPage() {
     try {
       const data = await fetchSampleF6(sampleType);
       setF6Text(data.f6_text);
+      setFilename(`sample_${sampleType.toLowerCase()}.txt`);
       setResult(null);
       setError(null);
       setSteps([]);
@@ -54,31 +98,26 @@ export default function ReverseConverterPage() {
   function handleReset() {
     setResult(null);
     setF6Text("");
+    setFilename("manual_f6_input");
     setError(null);
     setTypeFilter(null);
     setSteps([]);
   }
 
-  const audit = result?.audit || { summary: {}, entries: [], findings: [] };
+  const audit   = result?.audit || { summary: {}, entries: [], findings: [] };
+  const summary = audit.summary || {};
   const showPipeline = steps.length > 0 || loading;
+  const canConvert = !loading && f6Text.trim().length > 0;
 
-  const textareaStyle = {
-    width: "100%", minHeight: 280,
-    padding: "14px 16px",
-    fontFamily: "var(--font-mono)", fontSize: "var(--text-sm)",
-    lineHeight: 1.7,
-    background: "var(--bg-code)", color: "var(--text-code)",
-    border: "none", outline: "none", resize: "vertical",
-    display: "block",
-  };
+  const segCount = f6Text.trim().split("\n").filter(Boolean).length;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
       <PageHeader
         eyebrow="Reverse"
         title="F6 → D.0 Converter"
-        subtitle="Paste F6 transaction text. Strikethrough fields (~~field=value~~) from the diff view are automatically restored to D.0."
-        actions={result && result.conversion_id && (
+        subtitle="Paste or upload an F6 transaction. Fields added in F6 are dropped; deprecated fields marked with ~~strikethrough~~ are restored."
+        actions={result?.conversion_id && (
           <button
             onClick={() => navigate(`/history/${result.conversion_id}`)}
             style={{
@@ -108,21 +147,23 @@ export default function ReverseConverterPage() {
         </div>
       )}
 
+      {/* ── Input section ─────────────────────────────── */}
       {!result && (
-        <div style={{ padding: "24px 40px", flex: 1 }}>
-          {/* Sample type pills */}
-          <div style={{ display: "flex", gap: 6, marginBottom: 14, alignItems: "center", flexWrap: "wrap" }}>
-            <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)" }}>Load sample:</span>
-            {TX_SAMPLE_TYPES.map(t => (
+        <div style={{ padding: "24px 40px", flex: 1, display: "flex", flexDirection: "column", gap: 16 }}>
+
+          {/* Sample loader */}
+          <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+            <span style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", fontWeight: 500 }}>Load sample:</span>
+            {SAMPLE_TYPES.map(t => (
               <button
                 key={t}
                 onClick={() => setSampleType(t)}
                 style={{
                   padding: "3px 10px", borderRadius: "var(--radius-full)",
-                  border: `1px solid ${sampleType === t ? "var(--accent)" : "var(--border-subtle)"}`,
+                  border: `1px solid ${sampleType === t ? "var(--accent)" : "var(--border-default)"}`,
                   background: sampleType === t ? "var(--status-info-bg)" : "transparent",
-                  color: sampleType === t ? "var(--accent-bright)" : "var(--text-secondary)",
-                  fontSize: "var(--text-xs)", cursor: "pointer",
+                  color: sampleType === t ? "var(--accent)" : "var(--text-secondary)",
+                  fontSize: "var(--text-xs)", fontWeight: 500, cursor: "pointer",
                   transition: "all var(--transition-fast)",
                 }}
               >
@@ -133,7 +174,7 @@ export default function ReverseConverterPage() {
               onClick={handleLoadSample}
               style={{
                 padding: "3px 10px", borderRadius: "var(--radius-sm)",
-                border: "1px solid var(--border-subtle)",
+                border: "1px solid var(--border-default)",
                 background: "transparent", color: "var(--text-secondary)",
                 fontSize: "var(--text-xs)", cursor: "pointer",
               }}
@@ -142,64 +183,154 @@ export default function ReverseConverterPage() {
             </button>
           </div>
 
-          {/* Textarea card */}
+          {/* Input card */}
           <div style={{
             background: "var(--bg-surface)",
             border: "1px solid var(--border-subtle)",
-            borderRadius: "var(--radius-md)", overflow: "hidden", marginBottom: 16,
+            borderRadius: "var(--radius-md)",
+            overflow: "hidden",
+            boxShadow: "var(--shadow-sm)",
           }}>
-            <textarea
-              value={f6Text}
-              onChange={e => setF6Text(e.target.value)}
-              placeholder={"Paste F6 transaction text here…\n\nExample:\nHDR|101-A1=00610279|102-A2=F6|...\nINS|302-C2=ZH48291045|367-2N=01|~~990-MG=017394~~"}
-              style={textareaStyle}
-              onFocus={e => { e.target.style.boxShadow = "inset 0 0 0 1px var(--border-focus)"; }}
-              onBlur={e => { e.target.style.boxShadow = "none"; }}
-            />
+            {/* Toolbar */}
             <div style={{
-              padding: "10px 16px", borderTop: "1px solid var(--border-subtle)",
               display: "flex", alignItems: "center", justifyContent: "space-between",
+              padding: "10px 16px",
               background: "var(--bg-raised)",
+              borderBottom: "1px solid var(--border-subtle)",
             }}>
-              <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)" }}>
-                {f6Text.trim().split("\n").filter(Boolean).length} segments · {f6Text.length} chars
+              <span style={{ fontSize: "var(--text-xs)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-secondary)" }}>
+                F6 Transaction Input
               </span>
-              <div style={{ display: "flex", gap: 8 }}>
-                {f6Text && (
-                  <button
-                    onClick={() => setF6Text("")}
-                    style={{
-                      background: "none", border: "none",
-                      color: "var(--text-secondary)", fontSize: "var(--text-sm)", cursor: "pointer",
-                    }}
-                  >
-                    Clear
-                  </button>
-                )}
+              <button
+                onClick={() => fileRef.current?.click()}
+                style={{
+                  display: "flex", alignItems: "center", gap: 5,
+                  fontSize: "var(--text-xs)", background: "none",
+                  border: "1px solid var(--border-default)", borderRadius: "var(--radius-sm)",
+                  padding: "3px 10px", cursor: "pointer", color: "var(--text-secondary)",
+                }}
+              >
+                <IconUpload size={11} /> Upload .txt
+              </button>
+              <input
+                ref={fileRef}
+                type="file"
+                accept=".txt,.f6,.dat"
+                style={{ display: "none" }}
+                onChange={e => handleFile(e.target.files[0])}
+              />
+            </div>
+
+            {/* Textarea with drag-and-drop */}
+            <div
+              onDragOver={e => { e.preventDefault(); setDragging(true); }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={handleDrop}
+              style={{ position: "relative" }}
+            >
+              <textarea
+                value={f6Text}
+                onChange={e => { setF6Text(e.target.value); setFilename("manual_f6_input"); }}
+                placeholder={
+                  "Paste F6 transaction here, or drag & drop a file.\n\n" +
+                  "Example:\n" +
+                  "HDR|101-A1=00610279|102-A2=F6|103-A3=B1|...\n" +
+                  "INS|302-C2=ZH48291045|367-2N=01|~~990-MG=017394~~\n" +
+                  "CLM|402-D2=104872|...\n\n" +
+                  "Fields wrapped in ~~tildes~~ are deprecated D.0 fields\n" +
+                  "preserved in the F6 diff output — they will be restored."
+                }
+                spellCheck={false}
+                style={{
+                  width: "100%", minHeight: 240,
+                  padding: "14px 16px",
+                  fontFamily: "var(--font-mono)", fontSize: "var(--text-sm)",
+                  lineHeight: 1.7,
+                  background: dragging ? "var(--status-info-bg)" : "var(--bg-code)",
+                  color: "var(--text-code)",
+                  border: `1.5px solid ${dragging ? "var(--accent)" : "transparent"}`,
+                  borderRadius: 0, resize: "vertical", outline: "none",
+                  transition: "border-color var(--transition-normal)",
+                }}
+                onFocus={e  => { e.target.style.borderColor = "var(--border-focus)"; }}
+                onBlur={e   => { e.target.style.borderColor = "transparent"; }}
+              />
+              {f6Text && (
                 <button
-                  onClick={handleConvert}
-                  disabled={!f6Text.trim() || loading}
+                  onClick={() => { setF6Text(""); setFilename("manual_f6_input"); }}
                   style={{
-                    display: "flex", alignItems: "center", gap: 6,
-                    background: f6Text.trim() && !loading ? "linear-gradient(135deg, #2563EB, #7C3AED)" : "var(--bg-raised)",
-                    color: f6Text.trim() && !loading ? "#fff" : "var(--text-tertiary)",
-                    border: "none", borderRadius: "var(--radius-md)",
-                    padding: "7px 18px", fontSize: "var(--text-sm)", fontWeight: 600,
-                    cursor: f6Text.trim() && !loading ? "pointer" : "not-allowed",
-                    opacity: !f6Text.trim() || loading ? 0.7 : 1,
+                    position: "absolute", top: 8, right: 8,
+                    background: "var(--bg-raised)", border: "1px solid var(--border-subtle)",
+                    borderRadius: "var(--radius-sm)", padding: "2px 8px",
+                    color: "var(--text-tertiary)", fontSize: "var(--text-xs)", cursor: "pointer",
+                    display: "flex", alignItems: "center", gap: 4,
                   }}
                 >
-                  {loading && <IconSpinner size={13} color="#fff" />}
-                  {loading ? "Converting…" : "Convert to D.0 →"}
+                  <IconX size={10} /> clear
                 </button>
-              </div>
+              )}
             </div>
+
+            {/* Footer bar */}
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              padding: "8px 16px",
+              background: "var(--bg-raised)",
+              borderTop: "1px solid var(--border-subtle)",
+            }}>
+              <span style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)" }}>
+                {f6Text.trim()
+                  ? `${segCount} segment${segCount !== 1 ? "s" : ""} · ${f6Text.length.toLocaleString()} chars`
+                  : "Pipe-delimited F6 format · ~~field=value~~ for deprecated fields"
+                }
+              </span>
+              <button
+                onClick={handleConvert}
+                disabled={!canConvert}
+                style={{
+                  display: "flex", alignItems: "center", gap: 8,
+                  background: canConvert
+                    ? "linear-gradient(135deg, #2563EB, #7C3AED)"
+                    : "var(--bg-overlay)",
+                  color: canConvert ? "#fff" : "var(--text-muted)",
+                  border: "none", borderRadius: "var(--radius-md)",
+                  height: 36, padding: "0 22px",
+                  fontSize: "var(--text-sm)", fontWeight: 600,
+                  cursor: canConvert ? "pointer" : "not-allowed",
+                  boxShadow: canConvert ? "0 2px 12px rgba(37,99,235,0.3)" : "none",
+                  transition: "all var(--transition-normal)",
+                  opacity: canConvert ? 1 : 0.5,
+                }}
+              >
+                {loading
+                  ? <><IconSpinner size={13} color="#fff" /> Converting…</>
+                  : "Convert to D.0 →"
+                }
+              </button>
+            </div>
+          </div>
+
+          {/* Hint callout */}
+          <div style={{
+            padding: "10px 14px",
+            background: "var(--status-info-bg)",
+            border: "1px solid var(--border-subtle)",
+            borderLeft: "3px solid var(--status-info)",
+            borderRadius: "var(--radius-md)",
+            fontSize: "var(--text-xs)", color: "var(--text-secondary)", lineHeight: 1.6,
+          }}>
+            <strong style={{ color: "var(--text-primary)" }}>Tip:</strong> Run a D.0 → F6 conversion first, then paste the F6 output here to round-trip back to D.0.
+            Fields wrapped in <code style={{ fontFamily: "var(--font-mono)", background: "var(--bg-raised)", padding: "0 3px", borderRadius: 2 }}>~~tildes~~</code> are
+            restored automatically. F6-only fields (like <code style={{ fontFamily: "var(--font-mono)", background: "var(--bg-raised)", padding: "0 3px", borderRadius: 2 }}>367-2N</code>, <code style={{ fontFamily: "var(--font-mono)", background: "var(--bg-raised)", padding: "0 3px", borderRadius: 2 }}>995-E2</code>) are dropped.
           </div>
         </div>
       )}
 
+      {/* ── Results section ────────────────────────────── */}
       {result && (
         <div style={{ padding: "24px 40px", flex: 1, display: "flex", flexDirection: "column", gap: 20 }}>
+
+          {/* Top bar: nav + type badge + stat chips */}
           <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
             <button
               onClick={handleReset}
@@ -212,59 +343,34 @@ export default function ReverseConverterPage() {
               ← New conversion
             </button>
             <TransactionBadge type={result.transaction_type} />
-            <span style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", marginLeft: "auto" }}>
-              {audit.entries.length} fields audited
-            </span>
           </div>
 
-          {/* D.0 output panel */}
-          <div style={{
-            background: "var(--bg-surface)",
-            border: "1px solid var(--border-subtle)",
-            borderRadius: "var(--radius-md)", overflow: "hidden",
-          }}>
-            <div style={{
-              padding: "8px 16px", background: "var(--bg-raised)",
-              borderBottom: "1px solid var(--border-subtle)",
-              display: "flex", alignItems: "center", justifyContent: "space-between",
-            }}>
-              <span style={{ fontSize: "var(--text-xs)", fontWeight: 700, color: "var(--accent-bright)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                D.0 Output
-              </span>
-              <button
-                onClick={() => {
-                  const blob = new Blob([result.d0_output], { type: "text/plain" });
-                  const a = document.createElement("a");
-                  a.href = URL.createObjectURL(blob);
-                  a.download = `d0_output_${result.conversion_id?.slice(0, 8) || "result"}.txt`;
-                  a.click();
-                  URL.revokeObjectURL(a.href);
-                }}
-                style={{
-                  display: "flex", alignItems: "center", gap: 5,
-                  background: "transparent", border: "1px solid var(--border-subtle)",
-                  color: "var(--text-secondary)", borderRadius: "var(--radius-sm)",
-                  padding: "4px 10px", fontSize: "var(--text-xs)", cursor: "pointer",
-                }}
-              >
-                <IconDownload size={12} /> Download
-              </button>
-            </div>
-            <pre style={{
-              padding: "16px", margin: 0,
-              fontFamily: "var(--font-mono)", fontSize: "var(--text-sm)",
-              color: "var(--text-code)", lineHeight: 1.75,
-              overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-all",
-              background: "var(--bg-code)", maxHeight: 400, overflowY: "auto",
-            }}>
-              {result.d0_output}
-            </pre>
+          {/* Summary stat chips */}
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <StatChip label="carried"     value={summary.carried}     color="var(--status-neutral)" />
+            <StatChip label="restored"    value={summary.restored}    color="var(--status-success)" />
+            <StatChip label="transformed" value={summary.transformed} color="var(--status-warn)" />
+            <StatChip label="dropped"     value={summary.dropped}     color="var(--status-error)" />
+            {summary.missing > 0 && (
+              <StatChip label="missing" value={summary.missing} color="var(--status-error)" />
+            )}
+            {summary.warnings > 0 && (
+              <StatChip label="warnings" value={summary.warnings} color="var(--status-warn)" />
+            )}
           </div>
 
-          {/* Validation findings */}
+          {/* Side-by-side diff */}
+          <ReverseOutputPanel
+            f6Input={result.f6_input}
+            d0Output={result.d0_output}
+            auditEntries={audit.entries}
+            conversionId={result.conversion_id}
+          />
+
+          {/* Findings */}
           <ValidationFindings findings={audit.findings} />
 
-          {/* Audit */}
+          {/* Audit trail */}
           {audit.entries.length > 0 && (
             <>
               <AuditSummaryBar

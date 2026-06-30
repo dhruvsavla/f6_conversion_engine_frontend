@@ -18,7 +18,8 @@ import PageHeader from "./components/PageHeader";
 import { ToastProvider } from "./components/Toast";
 import {
   IconConvert, IconValidate, IconHistory, IconBatch,
-  IconRules, IconIngest, IconReverse, IconArrowRight, IconDatabase
+  IconRules, IconIngest, IconReverse, IconArrowRight, IconDatabase, IconResolution,
+  IconEngine,
 } from "./components/Icons";
 
 // Pages
@@ -28,29 +29,44 @@ import BatchesPage from "./pages/BatchesPage";
 import RulesPage from "./pages/RulesPage";
 import ReverseConverterPage from "./pages/ReverseConverterPage";
 import ValidatorPage from "./pages/ValidatorPage";
+import RuleResolutionPage from "./pages/RuleResolutionPage";
+import EngineMonitorPage from "./pages/EngineMonitorPage";
 
 // API
-import { convertBatch, convertStream, convertHexStream, fetchSample, fetchStats } from "./api/client";
+import { convertBatch, convertStream, convertHexStream, fetchSample, fetchStats, getFlaggedCount } from "./api/client";
 
 // ── Nav items ──────────────────────────────────────────────────
 const NAV_ITEMS = [
-  { to: "/",         label: "Convert",   Icon: IconConvert  },
-  { to: "/reverse",  label: "Reverse",   Icon: IconReverse  },
-  { to: "/validate", label: "Validate",  Icon: IconValidate },
-  { to: "/history",  label: "History",   Icon: IconHistory  },
-  { to: "/batches",  label: "Batches",   Icon: IconBatch    },
-  { to: "/rules",    label: "Rules",     Icon: IconRules    },
-  { to: "/ingest",   label: "Ingest",    Icon: IconIngest   },
+  { to: "/",           label: "Convert",    Icon: IconConvert    },
+  { to: "/reverse",    label: "Reverse",    Icon: IconReverse    },
+  { to: "/validate",   label: "Validate",   Icon: IconValidate   },
+  { to: "/history",    label: "History",    Icon: IconHistory    },
+  { to: "/batches",    label: "Batches",    Icon: IconBatch      },
+  { to: "/engine",     label: "Engine",     Icon: IconEngine     },
+  { to: "/resolution", label: "Resolution", Icon: IconResolution, badge: true },
+  { to: "/rules",      label: "Rules",      Icon: IconRules      },
+  { to: "/ingest",     label: "Ingest",     Icon: IconIngest     },
 ];
 
 // ── Command rail sidebar ───────────────────────────────────────
 function Sidebar({ expanded, onExpand, onCollapse }) {
   const [stats, setStats] = useState(null);
+  const [flaggedCount, setFlaggedCount] = useState(0);
   const location = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchStats().then(s => setStats(s)).catch(() => {});
+    fetchStats().then(s => {
+      setStats(s);
+      if (s?.flagged_rules != null) setFlaggedCount(s.flagged_rules);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const refresh = () =>
+      getFlaggedCount().then(d => setFlaggedCount(d.total || 0)).catch(() => {});
+    const id = setInterval(refresh, 60000);
+    return () => clearInterval(id);
   }, []);
 
   return (
@@ -90,7 +106,7 @@ function Sidebar({ expanded, onExpand, onCollapse }) {
           Rx
         </div>
         <span style={{
-          fontSize: 15, fontWeight: 700, color: "var(--text-primary)",
+          fontSize: 15, fontWeight: 700, color: "var(--rail-text-active)",
           letterSpacing: "-0.01em", whiteSpace: "nowrap",
           opacity: expanded ? 1 : 0,
           transition: "opacity var(--transition-normal)",
@@ -117,27 +133,55 @@ function Sidebar({ expanded, onExpand, onCollapse }) {
                 padding: "10px 14px",
                 borderRadius: "var(--radius-md)",
                 margin: "0 6px",
-                background: isActive ? "var(--status-info-bg)" : "transparent",
+                background: isActive ? "var(--rail-active-bg)" : "transparent",
                 cursor: "pointer",
                 whiteSpace: "nowrap",
                 userSelect: "none",
+                position: "relative",
               }}
             >
-              <div style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", width: 20, height: 20 }}>
+              <div style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", width: 20, height: 20, position: "relative" }}>
                 <item.Icon
                   size={20}
                   color={isActive ? "var(--accent-bright)" : "#9BBDD8"}
                 />
+                {item.badge && flaggedCount > 0 && (
+                  <span style={{
+                    position: "absolute", top: -4, right: -5,
+                    minWidth: 14, height: 14, padding: "0 3px",
+                    background: "var(--status-error)",
+                    borderRadius: "var(--radius-full)",
+                    fontSize: 9, fontWeight: 700, color: "#fff",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontFamily: "var(--font-mono)",
+                    boxShadow: "var(--shadow-glow-red)",
+                    lineHeight: 1,
+                  }}>
+                    {flaggedCount > 9 ? "9+" : flaggedCount}
+                  </span>
+                )}
               </div>
               <span style={{
                 fontSize: 14,
                 fontWeight: isActive ? 700 : 500,
                 opacity: expanded ? 1 : 0,
                 transition: "opacity var(--transition-normal)",
-                color: isActive ? "var(--accent-bright)" : "var(--text-secondary)",
+                color: isActive ? "var(--rail-text-active)" : "var(--rail-text)",
                 minWidth: 0,
               }}>
                 {item.label}
+                {item.badge && flaggedCount > 0 && expanded && (
+                  <span style={{
+                    marginLeft: 8, padding: "1px 6px",
+                    background: "var(--status-error-bg)",
+                    border: "1px solid var(--status-error)",
+                    borderRadius: "var(--radius-full)",
+                    fontSize: 10, fontWeight: 700, color: "var(--status-error)",
+                    fontFamily: "var(--font-mono)",
+                  }}>
+                    {flaggedCount}
+                  </span>
+                )}
               </span>
             </div>
           );
@@ -166,17 +210,17 @@ function Sidebar({ expanded, onExpand, onCollapse }) {
             transition: "opacity var(--transition-normal)",
             minWidth: 0, overflow: "hidden",
           }}>
-            <div style={{ fontSize: 12, fontWeight: 500, color: "var(--text-secondary)", lineHeight: 1.3, whiteSpace: "nowrap" }}>
+            <div style={{ fontSize: 12, fontWeight: 500, color: "var(--rail-text)", lineHeight: 1.3, whiteSpace: "nowrap" }}>
               {stats?.total_conversions ?? "—"} conversions
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
               <div style={{
                 width: 6, height: 6, borderRadius: "50%", flexShrink: 0,
-                background: stats ? "var(--status-success)" : "var(--status-neutral)",
-                boxShadow: stats ? "var(--shadow-glow-green)" : "none",
+                background: stats ? "#10B981" : "#475569",
+                boxShadow: stats ? "0 0 6px rgba(16,185,129,0.5)" : "none",
               }} />
               <span style={{
-                fontSize: 11, fontWeight: 500, color: "var(--text-tertiary)",
+                fontSize: 11, fontWeight: 500, color: "var(--rail-text)",
                 whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                 maxWidth: 140,
               }}>
@@ -382,6 +426,8 @@ export default function App() {
             <Route path="/history"     element={<HistoryPage />} />
             <Route path="/history/:id" element={<ConversionDetailPage />} />
             <Route path="/batches"     element={<BatchesPage />} />
+            <Route path="/engine"      element={<EngineMonitorPage />} />
+            <Route path="/resolution"  element={<RuleResolutionPage />} />
             <Route path="/rules"       element={<RulesPage />} />
             <Route path="/ingest"      element={<IngestionPage />} />
           </Routes>

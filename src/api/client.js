@@ -256,3 +256,83 @@ export async function deleteRule(ruleId) {
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
+
+// ── Rule Resolution (Human-in-the-Loop) ──────────────────────────────────────
+
+export async function getFlaggedRules() {
+  const res = await fetch(`${BASE}/api/ingest/flagged`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+export async function getFlaggedCount() {
+  const res = await fetch(`${BASE}/api/ingest/flagged/count`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+export async function resolveRule(body) {
+  const res = await fetch(`${BASE}/api/ingest/resolve`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(data.message || data.detail || `HTTP ${res.status}`);
+    err.status = res.status;
+    err.data   = data;
+    throw err;
+  }
+  return data;
+}
+
+export async function resolveAllAuto(body) {
+  const res = await fetch(`${BASE}/api/ingest/resolve-all`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const d = await res.json().catch(() => ({}));
+    throw new Error(d.detail || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function getResolutionHistory(limit = 50) {
+  const res = await fetch(`${BASE}/api/ingest/history?limit=${limit}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+export async function clearFlaggedRules() {
+  const res = await fetch(`${BASE}/api/ingest/flagged?confirm=yes`, { method: "DELETE" });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+// ── LLM Decisions ─────────────────────────────────────────────────────────────
+
+export async function fetchLLMDecisions(conversionId) {
+  const res = await fetch(`${BASE}/api/conversions/${encodeURIComponent(conversionId)}/llm-decisions`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+// ── Engine Monitor ────────────────────────────────────────────────────────────
+
+export async function fetchEngineStats() {
+  const res = await fetch(`${BASE}/api/engine/stats`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+export async function reloadEngineRules() {
+  const res = await fetch(`${BASE}/api/engine/reload-rules`, { method: "POST" });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
