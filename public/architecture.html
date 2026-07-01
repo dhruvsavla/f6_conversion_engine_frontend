@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ClaimConvert — System Architecture</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #08080f;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 28px 20px 40px;
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  h1 {
+    color: #c0c0e0;
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    margin-bottom: 20px;
+    opacity: 0.7;
+  }
+  svg { display: block; max-width: 100%; height: auto; }
+</style>
+</head>
+<body>
+<h1>ClaimConvert — System Architecture v3.0</h1>
+<svg width="1500" height="976" viewBox="0 0 1500 976" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,1 L9,5 L0,9 z" fill="#3a3a60"/>
+    </marker>
+  </defs>
+
+  <!-- ═══════════════════════════════════════════════
+       SECTION 1 — FRONTEND
+  ═══════════════════════════════════════════════ -->
+  <rect x="18" y="16" width="1464" height="148" rx="6"
+        fill="#0d0d1a" stroke="#222240" stroke-width="1"/>
+  <text x="38" y="36" fill="#40406a" font-size="10" font-weight="700"
+        letter-spacing="1.4" font-family="system-ui">FRONTEND — REACT APP (localhost:3000)</text>
+
+  <!-- Page boxes (8), each 118×46, gap 9, starting x=38 -->
+  <rect x="38"  y="50" width="118" height="46" rx="4" fill="#f8f8ff" stroke="#c4c4dc"/>
+  <text x="97"  y="70" text-anchor="middle" fill="#14143a" font-size="12" font-weight="700" font-family="system-ui">Convert</text>
+  <text x="97"  y="85" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">D.0 → F6 · ConverterPage</text>
+
+  <rect x="165" y="50" width="118" height="46" rx="4" fill="#f8f8ff" stroke="#c4c4dc"/>
+  <text x="224" y="70" text-anchor="middle" fill="#14143a" font-size="12" font-weight="700" font-family="system-ui">Correct</text>
+  <text x="224" y="85" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">F6 → F6 · CorrectPage</text>
+
+  <rect x="292" y="50" width="118" height="46" rx="4" fill="#f8f8ff" stroke="#c4c4dc"/>
+  <text x="351" y="70" text-anchor="middle" fill="#14143a" font-size="12" font-weight="700" font-family="system-ui">History</text>
+  <text x="351" y="85" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">Conversion log · detail</text>
+
+  <rect x="419" y="50" width="118" height="46" rx="4" fill="#f8f8ff" stroke="#c4c4dc"/>
+  <text x="478" y="70" text-anchor="middle" fill="#14143a" font-size="12" font-weight="700" font-family="system-ui">Batches</text>
+  <text x="478" y="85" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">File upload · progress</text>
+
+  <rect x="546" y="50" width="148" height="46" rx="4" fill="#f8f8ff" stroke="#c4c4dc"/>
+  <text x="620" y="70" text-anchor="middle" fill="#14143a" font-size="12" font-weight="700" font-family="system-ui">Engine Monitor</text>
+  <text x="620" y="85" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">Pool stats · health · reload</text>
+
+  <rect x="703" y="50" width="148" height="46" rx="4" fill="#f8f8ff" stroke="#c4c4dc"/>
+  <text x="777" y="70" text-anchor="middle" fill="#14143a" font-size="12" font-weight="700" font-family="system-ui">Resolution</text>
+  <text x="777" y="85" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">Human-in-the-loop review</text>
+
+  <rect x="860" y="50" width="118" height="46" rx="4" fill="#f8f8ff" stroke="#c4c4dc"/>
+  <text x="919" y="70" text-anchor="middle" fill="#14143a" font-size="12" font-weight="700" font-family="system-ui">Rules</text>
+  <text x="919" y="85" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">DB rule sets · activate</text>
+
+  <rect x="987" y="50" width="118" height="46" rx="4" fill="#f8f8ff" stroke="#c4c4dc"/>
+  <text x="1046" y="70" text-anchor="middle" fill="#14143a" font-size="12" font-weight="700" font-family="system-ui">Ingest</text>
+  <text x="1046" y="85" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">PDF / doc pipeline</text>
+
+  <!-- API Client box -->
+  <rect x="1120" y="50" width="350" height="46" rx="4" fill="#f0f0fc" stroke="#a8a8cc"/>
+  <text x="1295" y="70" text-anchor="middle" fill="#14143a" font-size="12" font-weight="700" font-family="system-ui">API Client</text>
+  <text x="1295" y="85" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">src/api/client.js  ·  SSE · fetch · _readSSE()</text>
+
+  <!-- Footer note -->
+  <text x="38" y="152" fill="#2a2a48" font-size="10" font-family="system-ui">
+    React 18 · React Router v6 · PipelineCircuit · AuditTable · TransactionBadge · ToastProvider
+  </text>
+
+  <!-- ═══════════════════════════════════════════════
+       ARROW: Frontend → FastAPI
+  ═══════════════════════════════════════════════ -->
+  <line x1="750" y1="164" x2="750" y2="200"
+        stroke="#3a3a60" stroke-width="1.5" marker-end="url(#ah)"/>
+  <text x="756" y="186" fill="#3a3a60" font-size="10" font-family="system-ui">REST API / SSE Streams</text>
+
+  <!-- ═══════════════════════════════════════════════
+       SECTION 2 — FASTAPI APP
+  ═══════════════════════════════════════════════ -->
+  <rect x="440" y="204" width="620" height="68" rx="5"
+        fill="#f8f8ff" stroke="#7070b0" stroke-width="1.5"/>
+  <text x="750" y="230" text-anchor="middle" fill="#14143a" font-size="14" font-weight="700" font-family="system-ui">FastAPI Application</text>
+  <text x="750" y="248" text-anchor="middle" fill="#3a3a90" font-size="10" font-weight="600" font-family="system-ui">main.py  ·  v3.0.0</text>
+  <text x="750" y="262" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">
+    /api/convert/stream  ·  /api/correct/stream  ·  /api/validate  ·  /api/conversions  ·  /api/rules  ·  /api/batches  ·  /api/ingest/*  ·  /api/engine/*
+  </text>
+
+  <!-- ═══════════════════════════════════════════════
+       BUS LINE + DROPS to middle layer
+  ═══════════════════════════════════════════════ -->
+  <!-- Vertical from FastAPI bottom to bus -->
+  <line x1="750" y1="272" x2="750" y2="310" stroke="#222240" stroke-width="1"/>
+  <!-- Horizontal bus -->
+  <line x1="108"  y1="310" x2="1395" y2="310" stroke="#222240" stroke-width="1"/>
+  <!-- Drops to 5 boxes (x = center of each box) -->
+  <line x1="108"  y1="310" x2="108"  y2="335" stroke="#3a3a60" stroke-width="1" marker-end="url(#ah)"/>
+  <line x1="370"  y1="310" x2="370"  y2="335" stroke="#3a3a60" stroke-width="1" marker-end="url(#ah)"/>
+  <line x1="638"  y1="310" x2="638"  y2="335" stroke="#3a3a60" stroke-width="1" marker-end="url(#ah)"/>
+  <line x1="922"  y1="310" x2="922"  y2="335" stroke="#3a3a60" stroke-width="1" marker-end="url(#ah)"/>
+  <line x1="1200" y1="310" x2="1200" y2="335" stroke="#3a3a60" stroke-width="1" marker-end="url(#ah)"/>
+
+  <!-- ═══════════════════════════════════════════════
+       SECTION 3 — MIDDLE LAYER (5 boxes)
+  ═══════════════════════════════════════════════ -->
+
+  <!-- SQLite Database  x=20 w=175 -->
+  <rect x="20" y="335" width="175" height="80" rx="4" fill="#f8f8ff" stroke="#c4c4dc"/>
+  <text x="107" y="357" text-anchor="middle" fill="#14143a" font-size="12" font-weight="700" font-family="system-ui">SQLite Database</text>
+  <text x="107" y="373" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">database.py / db_ops.py</text>
+  <text x="107" y="387" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">conversions · audit entries</text>
+  <text x="107" y="401" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">rules · batches · validations</text>
+
+  <!-- Validation Orchestrator  x=208 w=325 -->
+  <rect x="208" y="335" width="325" height="80" rx="4" fill="#f8f8ff" stroke="#c4c4dc"/>
+  <text x="370" y="357" text-anchor="middle" fill="#14143a" font-size="12" font-weight="700" font-family="system-ui">Validation Orchestrator</text>
+  <text x="370" y="373" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">agent/validation_orchestrator.py</text>
+  <text x="370" y="387" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">POST /api/validate · GET /api/validations/*</text>
+  <text x="370" y="401" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">structural · mandatory · format · business checks</text>
+
+  <!-- Ingestion Router  x=546 w=285 -->
+  <rect x="546" y="335" width="285" height="80" rx="4" fill="#f8f8ff" stroke="#c4c4dc"/>
+  <text x="688" y="357" text-anchor="middle" fill="#14143a" font-size="12" font-weight="700" font-family="system-ui">Ingestion Router</text>
+  <text x="688" y="373" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">ingestion/ingest_api.py</text>
+  <text x="688" y="387" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">PDF / doc → LLM extract → rule candidates</text>
+  <text x="688" y="401" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">/flagged · /resolve · /resolve-all · /history</text>
+
+  <!-- Job Queue  x=845 w=250 -->
+  <rect x="845" y="335" width="250" height="80" rx="4" fill="#f8f8ff" stroke="#c4c4dc"/>
+  <text x="970" y="357" text-anchor="middle" fill="#14143a" font-size="12" font-weight="700" font-family="system-ui">Job Queue</text>
+  <text x="970" y="373" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">engine/job_queue.py</text>
+  <text x="970" y="387" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">Priority · ConversionJob</text>
+  <text x="970" y="401" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">direction · filename · rule_set_id</text>
+
+  <!-- Arrow: Job Queue → Agent Pool -->
+  <line x1="1095" y1="375" x2="1118" y2="375"
+        stroke="#3a3a60" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- Agent Pool Manager  x=1118 w=360 -->
+  <rect x="1118" y="335" width="362" height="80" rx="4" fill="#f8f8ff" stroke="#c4c4dc"/>
+  <text x="1299" y="357" text-anchor="middle" fill="#14143a" font-size="12" font-weight="700" font-family="system-ui">Agent Pool Manager</text>
+  <text x="1299" y="373" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">engine/agent_pool.py  ·  engine/agent.py</text>
+  <text x="1299" y="387" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">async worker pool · n_agents · health checks</text>
+  <text x="1299" y="401" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">_execute_forward() · SSE streaming</text>
+
+  <!-- Arrow: Agent Pool → D0→F6 pipeline (right side drop) -->
+  <line x1="1299" y1="415" x2="1299" y2="440" stroke="#3a3a60" stroke-width="1" marker-end="url(#ah)"/>
+
+  <!-- ═══════════════════════════════════════════════
+       SECTION 4 — D0→F6 CONVERSION PIPELINE
+  ═══════════════════════════════════════════════ -->
+  <rect x="18" y="445" width="1464" height="228" rx="6"
+        fill="#0d0d1a" stroke="#222240" stroke-width="1"/>
+  <text x="38" y="466" fill="#40406a" font-size="10" font-weight="700"
+        letter-spacing="1.4" font-family="system-ui">D.0 → F6 CONVERSION PIPELINE — agent/orchestrator.py</text>
+
+  <!-- Row 1: 8 pipeline step boxes, y=476 h=64 -->
+  <!-- Box w=158 gap=10, start x=38 -->
+
+  <!-- F6 Parser -->
+  <rect x="38"  y="476" width="158" height="64" rx="4" fill="#f8f8ff" stroke="#c4c4dc"/>
+  <text x="117" y="496" text-anchor="middle" fill="#14143a" font-size="11" font-weight="700" font-family="system-ui">F6 Parser</text>
+  <text x="117" y="512" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">agent/f6_parser.py</text>
+  <text x="117" y="527" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">agent/segment_parser.py</text>
+  <text x="117" y="535" text-anchor="middle" fill="#505088" font-size="8"  font-family="system-ui">ParsedTransaction</text>
+  <line x1="196" y1="508" x2="210" y2="508" stroke="#3a3a60" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- Field Mapper -->
+  <rect x="210" y="476" width="158" height="64" rx="4" fill="#f8f8ff" stroke="#c4c4dc"/>
+  <text x="289" y="496" text-anchor="middle" fill="#14143a" font-size="11" font-weight="700" font-family="system-ui">Field Mapper</text>
+  <text x="289" y="512" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">agent/field_mapper.py</text>
+  <text x="289" y="527" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">D.0 → F6 field map</text>
+  <text x="289" y="535" text-anchor="middle" fill="#505088" font-size="8"  font-family="system-ui">carry · transform · add</text>
+  <line x1="368" y1="508" x2="382" y2="508" stroke="#3a3a60" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- Rule Transformer -->
+  <rect x="382" y="476" width="158" height="64" rx="4" fill="#f8f8ff" stroke="#c4c4dc"/>
+  <text x="461" y="496" text-anchor="middle" fill="#14143a" font-size="11" font-weight="700" font-family="system-ui">Rule Transformer</text>
+  <text x="461" y="512" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">agent/transformer.py</text>
+  <text x="461" y="527" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">MAP_CODE · zero-pad</text>
+  <text x="461" y="535" text-anchor="middle" fill="#505088" font-size="8"  font-family="system-ui">format · conditions</text>
+  <line x1="540" y1="508" x2="554" y2="508" stroke="#3a3a60" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- PHI Masker -->
+  <rect x="554" y="476" width="148" height="64" rx="4" fill="#f8f8ff" stroke="#c4c4dc"/>
+  <text x="628" y="496" text-anchor="middle" fill="#14143a" font-size="11" font-weight="700" font-family="system-ui">PHI Masker</text>
+  <text x="628" y="512" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">engine/phi_masker.py</text>
+  <text x="628" y="527" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">mask_transaction()</text>
+  <text x="628" y="535" text-anchor="middle" fill="#505088" font-size="8"  font-family="system-ui">HIPAA-safe LLM input</text>
+  <line x1="702" y1="508" x2="716" y2="508" stroke="#3a3a60" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- LLM Resolver -->
+  <rect x="716" y="476" width="158" height="64" rx="4" fill="#f8f8ff" stroke="#c4c4dc"/>
+  <text x="795" y="496" text-anchor="middle" fill="#14143a" font-size="11" font-weight="700" font-family="system-ui">LLM Resolver</text>
+  <text x="795" y="512" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">engine/llm_resolver.py</text>
+  <text x="795" y="527" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">claude-sonnet-4-6</text>
+  <text x="795" y="535" text-anchor="middle" fill="#505088" font-size="8"  font-family="system-ui">→ list[LLMDecision]</text>
+  <line x1="874" y1="508" x2="888" y2="508" stroke="#3a3a60" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- LLM Merger -->
+  <rect x="888" y="476" width="158" height="64" rx="4" fill="#f8f8ff" stroke="#c4c4dc"/>
+  <text x="967" y="496" text-anchor="middle" fill="#14143a" font-size="11" font-weight="700" font-family="system-ui">LLM Merger</text>
+  <text x="967" y="512" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">engine/llm_merger.py</text>
+  <text x="967" y="527" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">merge_llm_decisions()</text>
+  <text x="967" y="535" text-anchor="middle" fill="#505088" font-size="8"  font-family="system-ui">audit entries · LLM:model:conf</text>
+  <line x1="1046" y1="508" x2="1060" y2="508" stroke="#3a3a60" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- F6 Assembler -->
+  <rect x="1060" y="476" width="158" height="64" rx="4" fill="#f8f8ff" stroke="#c4c4dc"/>
+  <text x="1139" y="496" text-anchor="middle" fill="#14143a" font-size="11" font-weight="700" font-family="system-ui">F6 Assembler</text>
+  <text x="1139" y="512" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">agent/f6_assembler.py</text>
+  <text x="1139" y="527" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">ordered segment output</text>
+  <text x="1139" y="535" text-anchor="middle" fill="#505088" font-size="8"  font-family="system-ui">F6 transaction text</text>
+  <line x1="1218" y1="508" x2="1232" y2="508" stroke="#3a3a60" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- Audit Builder -->
+  <rect x="1232" y="476" width="232" height="64" rx="4" fill="#f8f8ff" stroke="#c4c4dc"/>
+  <text x="1348" y="496" text-anchor="middle" fill="#14143a" font-size="11" font-weight="700" font-family="system-ui">Audit Builder</text>
+  <text x="1348" y="512" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">agent/audit_builder.py</text>
+  <text x="1348" y="527" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">entries · summary · findings</text>
+  <text x="1348" y="535" text-anchor="middle" fill="#505088" font-size="8"  font-family="system-ui">→ DB · → SSE result event</text>
+
+  <!-- Row 2 (support layer): F6 Validator, TX Detector, Rule Cache -->
+  <rect x="38"  y="558" width="180" height="60" rx="4" fill="#f8f8ff" stroke="#c4c4dc"/>
+  <text x="128" y="577" text-anchor="middle" fill="#14143a" font-size="11" font-weight="700" font-family="system-ui">F6 Validator</text>
+  <text x="128" y="593" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">agent/f6_validator.py</text>
+  <text x="128" y="607" text-anchor="middle" fill="#505088" font-size="8"  font-family="system-ui">structural · mandatory · format · biz · deprecated</text>
+
+  <rect x="232" y="558" width="210" height="60" rx="4" fill="#f8f8ff" stroke="#c4c4dc"/>
+  <text x="337" y="577" text-anchor="middle" fill="#14143a" font-size="11" font-weight="700" font-family="system-ui">TX Detector</text>
+  <text x="337" y="593" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">agent/transaction_detector.py</text>
+  <text x="337" y="607" text-anchor="middle" fill="#505088" font-size="8"  font-family="system-ui">RETAIL · COB · CMP · LTC · PA · ELIG · REVERSAL…</text>
+
+  <rect x="456" y="558" width="210" height="60" rx="4" fill="#f8f8ff" stroke="#c4c4dc"/>
+  <text x="561" y="577" text-anchor="middle" fill="#14143a" font-size="11" font-weight="700" font-family="system-ui">Rule Cache</text>
+  <text x="561" y="593" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">engine/rule_cache.py</text>
+  <text x="561" y="607" text-anchor="middle" fill="#505088" font-size="8"  font-family="system-ui">866 rules · per-tx-type · load_all_from_db()</text>
+
+  <!-- ═══════════════════════════════════════════════
+       SECTION 5 — F6→F6 CORRECTION PIPELINE
+  ═══════════════════════════════════════════════ -->
+  <rect x="18" y="692" width="1464" height="140" rx="6"
+        fill="#0d0d1a" stroke="#222240" stroke-width="1"/>
+  <text x="38" y="712" fill="#40406a" font-size="10" font-weight="700"
+        letter-spacing="1.4" font-family="system-ui">F6 → F6 CORRECTION PIPELINE — main.py · _stream_f6_correction() · POST /api/correct/stream</text>
+
+  <!-- 6 step boxes, each w=232, gap=6, y=720 h=80 -->
+  <rect x="38"  y="720" width="232" height="80" rx="4" fill="#f8f8ff" stroke="#c4c4dc"/>
+  <text x="154" y="740" text-anchor="middle" fill="#14143a" font-size="11" font-weight="700" font-family="system-ui">① Parse + Detect</text>
+  <text x="154" y="756" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">f6_parser · transaction_detector</text>
+  <text x="154" y="770" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">ParsedTransaction · tx_type</text>
+  <text x="154" y="793" text-anchor="middle" fill="#505088" font-size="8"  font-family="system-ui">step SSE event →</text>
+  <line x1="270" y1="760" x2="284" y2="760" stroke="#3a3a60" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <rect x="284" y="720" width="232" height="80" rx="4" fill="#f8f8ff" stroke="#c4c4dc"/>
+  <text x="400" y="740" text-anchor="middle" fill="#14143a" font-size="11" font-weight="700" font-family="system-ui">② Validate</text>
+  <text x="400" y="756" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">F6Validator vs active DB rule set</text>
+  <text x="400" y="770" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">ValidationReport · pre_score</text>
+  <text x="400" y="793" text-anchor="middle" fill="#505088" font-size="8"  font-family="system-ui">early exit if VALID</text>
+  <line x1="516" y1="760" x2="530" y2="760" stroke="#3a3a60" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <rect x="530" y="720" width="232" height="80" rx="4" fill="#f8f8ff" stroke="#c4c4dc"/>
+  <text x="646" y="740" text-anchor="middle" fill="#14143a" font-size="11" font-weight="700" font-family="system-ui">③ LLM Correct</text>
+  <text x="646" y="756" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">PHI mask → claude-sonnet-4-6</text>
+  <text x="646" y="770" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">LLM_CORRECTION_SYSTEM_PROMPT</text>
+  <text x="646" y="793" text-anchor="middle" fill="#505088" font-size="8"  font-family="system-ui">→ list[LLMDecision]</text>
+  <line x1="762" y1="760" x2="776" y2="760" stroke="#3a3a60" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <rect x="776" y="720" width="232" height="80" rx="4" fill="#f8f8ff" stroke="#c4c4dc"/>
+  <text x="892" y="740" text-anchor="middle" fill="#14143a" font-size="11" font-weight="700" font-family="system-ui">④ Merge</text>
+  <text x="892" y="756" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">unmask → merge_llm_decisions()</text>
+  <text x="892" y="770" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">corrected F6 text + audit entries</text>
+  <text x="892" y="793" text-anchor="middle" fill="#505088" font-size="8"  font-family="system-ui">RESOLVED / INFERRED / UNRESOLVABLE</text>
+  <line x1="1008" y1="760" x2="1022" y2="760" stroke="#3a3a60" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <rect x="1022" y="720" width="232" height="80" rx="4" fill="#f8f8ff" stroke="#c4c4dc"/>
+  <text x="1138" y="740" text-anchor="middle" fill="#14143a" font-size="11" font-weight="700" font-family="system-ui">⑤ Re-validate</text>
+  <text x="1138" y="756" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">F6Validator · score delta</text>
+  <text x="1138" y="770" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">post_score · errors remaining</text>
+  <text x="1138" y="793" text-anchor="middle" fill="#505088" font-size="8"  font-family="system-ui">CORRECTED · PARTIAL · UNCORRECTABLE</text>
+  <line x1="1254" y1="760" x2="1268" y2="760" stroke="#3a3a60" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <rect x="1268" y="720" width="214" height="80" rx="4" fill="#f8f8ff" stroke="#c4c4dc"/>
+  <text x="1375" y="740" text-anchor="middle" fill="#14143a" font-size="11" font-weight="700" font-family="system-ui">⑥ SSE Result</text>
+  <text x="1375" y="756" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">f6_output · corrections</text>
+  <text x="1375" y="770" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">unresolvable · audit trail</text>
+  <text x="1375" y="793" text-anchor="middle" fill="#505088" font-size="8"  font-family="system-ui">pre_score → post_score</text>
+
+  <!-- ═══════════════════════════════════════════════
+       SECTION 6 — SHARED ENGINE & RULES
+  ═══════════════════════════════════════════════ -->
+  <rect x="18" y="850" width="1464" height="110" rx="6"
+        fill="#0d0d1a" stroke="#222240" stroke-width="1"/>
+  <text x="38" y="869" fill="#40406a" font-size="10" font-weight="700"
+        letter-spacing="1.4" font-family="system-ui">SHARED ENGINE &amp; RULES</text>
+
+  <!-- 6 boxes, each w=230, gap=10, y=878 h=64 -->
+  <rect x="38"  y="878" width="230" height="64" rx="4" fill="#f8f8ff" stroke="#c4c4dc"/>
+  <text x="153" y="898" text-anchor="middle" fill="#14143a" font-size="11" font-weight="700" font-family="system-ui">PHI Masker</text>
+  <text x="153" y="914" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">engine/phi_masker.py</text>
+  <text x="153" y="930" text-anchor="middle" fill="#505088" font-size="8"  font-family="system-ui">mask_transaction · unmask_llm_output</text>
+
+  <rect x="278" y="878" width="230" height="64" rx="4" fill="#f8f8ff" stroke="#c4c4dc"/>
+  <text x="393" y="898" text-anchor="middle" fill="#14143a" font-size="11" font-weight="700" font-family="system-ui">LLM Resolver</text>
+  <text x="393" y="914" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">engine/llm_resolver.py</text>
+  <text x="393" y="930" text-anchor="middle" fill="#505088" font-size="8"  font-family="system-ui">resolve() · system_prompt · 2048 tok max</text>
+
+  <rect x="518" y="878" width="230" height="64" rx="4" fill="#f8f8ff" stroke="#c4c4dc"/>
+  <text x="633" y="898" text-anchor="middle" fill="#14143a" font-size="11" font-weight="700" font-family="system-ui">LLM Merger</text>
+  <text x="633" y="914" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">engine/llm_merger.py</text>
+  <text x="633" y="930" text-anchor="middle" fill="#505088" font-size="8"  font-family="system-ui">merge_llm_decisions · _make_audit_entry</text>
+
+  <rect x="758" y="878" width="230" height="64" rx="4" fill="#f8f8ff" stroke="#c4c4dc"/>
+  <text x="873" y="898" text-anchor="middle" fill="#14143a" font-size="11" font-weight="700" font-family="system-ui">TX Detector</text>
+  <text x="873" y="914" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">agent/transaction_detector.py</text>
+  <text x="873" y="930" text-anchor="middle" fill="#505088" font-size="8"  font-family="system-ui">10 tx types · DUR · CMP · COB · PA…</text>
+
+  <rect x="998" y="878" width="230" height="64" rx="4" fill="#f8f8ff" stroke="#c4c4dc"/>
+  <text x="1113" y="898" text-anchor="middle" fill="#14143a" font-size="11" font-weight="700" font-family="system-ui">Rule Cache</text>
+  <text x="1113" y="914" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">engine/rule_cache.py</text>
+  <text x="1113" y="930" text-anchor="middle" fill="#505088" font-size="8"  font-family="system-ui">866 rules · per-tx-type lookup</text>
+
+  <rect x="1238" y="878" width="244" height="64" rx="4" fill="#f8f8ff" stroke="#c4c4dc"/>
+  <text x="1360" y="898" text-anchor="middle" fill="#14143a" font-size="11" font-weight="700" font-family="system-ui">DB Rule Sets</text>
+  <text x="1360" y="914" text-anchor="middle" fill="#6464a0" font-size="9"  font-family="system-ui">seeds/f6_standards_seeder.py</text>
+  <text x="1360" y="930" text-anchor="middle" fill="#505088" font-size="8"  font-family="system-ui">866 rules · 1 active set · load_all_from_db()</text>
+
+</svg>
+</body>
+</html>

@@ -17,8 +17,8 @@ import BatchProgress from "./components/BatchProgress";
 import PageHeader from "./components/PageHeader";
 import { ToastProvider } from "./components/Toast";
 import {
-  IconConvert, IconValidate, IconHistory, IconBatch,
-  IconRules, IconIngest, IconReverse, IconArrowRight, IconDatabase, IconResolution,
+  IconConvert, IconHistory, IconBatch,
+  IconRules, IconIngest, IconCorrect, IconArrowRight, IconDatabase, IconResolution,
   IconEngine,
 } from "./components/Icons";
 
@@ -27,8 +27,7 @@ import HistoryPage from "./pages/HistoryPage";
 import ConversionDetailPage from "./pages/ConversionDetailPage";
 import BatchesPage from "./pages/BatchesPage";
 import RulesPage from "./pages/RulesPage";
-import ReverseConverterPage from "./pages/ReverseConverterPage";
-import ValidatorPage from "./pages/ValidatorPage";
+import CorrectPage from "./pages/CorrectPage";
 import RuleResolutionPage from "./pages/RuleResolutionPage";
 import EngineMonitorPage from "./pages/EngineMonitorPage";
 
@@ -37,9 +36,8 @@ import { convertBatch, convertStream, convertHexStream, fetchSample, fetchStats,
 
 // ── Nav items ──────────────────────────────────────────────────
 const NAV_ITEMS = [
-  { to: "/",           label: "Convert",    Icon: IconConvert    },
-  { to: "/reverse",    label: "Reverse",    Icon: IconReverse    },
-  { to: "/validate",   label: "Validate",   Icon: IconValidate   },
+  { to: "/",        label: "Convert",  Icon: IconConvert  },
+  { to: "/correct", label: "Correct",  Icon: IconCorrect  },
   { to: "/history",    label: "History",    Icon: IconHistory    },
   { to: "/batches",    label: "Batches",    Icon: IconBatch      },
   { to: "/engine",     label: "Engine",     Icon: IconEngine     },
@@ -421,8 +419,7 @@ export default function App() {
         <Layout>
           <Routes>
             <Route path="/"            element={<ConverterPage />} />
-            <Route path="/reverse"     element={<ReverseConverterPage />} />
-            <Route path="/validate"    element={<ValidatorPage />} />
+            <Route path="/correct"     element={<CorrectPage />} />
             <Route path="/history"     element={<HistoryPage />} />
             <Route path="/history/:id" element={<ConversionDetailPage />} />
             <Route path="/batches"     element={<BatchesPage />} />

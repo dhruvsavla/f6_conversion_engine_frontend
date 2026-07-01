@@ -1,5 +1,4 @@
-const BASE = "http://localhost:8000";
-
+const BASE = process.env.REACT_APP_API_URL || "http://localhost:8000";
 /**
  * Upload a PDF and start an extraction job.
  * Returns { job_id, pdf_name }.

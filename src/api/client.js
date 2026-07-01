@@ -1,4 +1,4 @@
-const BASE = "http://localhost:8000";
+const BASE = process.env.REACT_APP_API_URL || "http://localhost:8000";
 
 // ── Core SSE conversion (existing — unchanged) ────────────────────────────────
 
@@ -88,19 +88,19 @@ export async function fetchRulesSummary() {
   return res.json();
 }
 
-// ── F6 → D.0 Reverse Conversion ──────────────────────────────────────────────
+// ── F6 → F6 Correction ───────────────────────────────────────────────────────
 
-export async function reverseConvert(f6Text, filename = 'manual_f6_input') {
-  const res = await fetch(`${BASE}/api/reverse-convert`, {
+export async function correctF6Stream(f6Text, { onStep, onResult, onError } = {}, filename = "manual_input_f6") {
+  const response = await fetch(`${BASE}/api/correct/stream`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ f6_text: f6Text, filename }),
   });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.detail || `HTTP ${res.status}`);
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body.detail || `HTTP ${response.status}`);
   }
-  return res.json();
+  return _readSSE(response, { onStep, onResult, onError });
 }
 
 export async function fetchSampleF6(type = "RETAIL") {

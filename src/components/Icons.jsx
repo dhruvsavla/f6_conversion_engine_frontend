@@ -14,11 +14,6 @@ export const IconConvert = ({ size = 18, color }) => (
   </svg>
 );
 
-export const IconValidate = ({ size = 18, color }) => (
-  <svg {...svgProps(size, color)}>
-    <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-  </svg>
-);
 
 export const IconHistory = ({ size = 18, color }) => (
   <svg {...svgProps(size, color)}>
@@ -158,15 +153,16 @@ export const IconArrowRight = ({ size = 16, color = 'currentColor' }) => (
   </svg>
 );
 
-export const IconReverse = ({ size = 18, color }) => (
-  <svg {...svgProps(size, color)}>
-    <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-  </svg>
-);
-
 export const IconEngine = ({ size = 18, color }) => (
   <svg {...svgProps(size, color)}>
     <path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18" />
     <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
+  </svg>
+);
+
+export const IconCorrect = ({ size = 18, color }) => (
+  <svg {...svgProps(size, color)}>
+    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
   </svg>
 );

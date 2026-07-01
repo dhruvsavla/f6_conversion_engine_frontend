@@ -60,3 +60,4 @@ export default function PipelineSteps({ steps = [], isRunning }) {
     </div>
   );
 }
+
