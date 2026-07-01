@@ -11,16 +11,6 @@ const TX_TYPES = [
 
 const SEGMENTS = ["", "HDR", "INS", "PAT", "CLM", "PRE", "PRI", "DUR", "COB", "CMP", "PA"];
 
-const STEP_LABELS = [
-  "", // 0 = not started
-  "Loading PDF",
-  "Extracting text",
-  "Chunking by segment",
-  "Extracting rules via LLM",
-  "Validating",
-  "Writing output",
-];
-
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function StepIndicator({ current, label }) {
@@ -199,7 +189,6 @@ export default function IngestionPage() {
 
   const isRunning  = job?.status === "running";
   const isDone     = job?.status === "completed";
-  const isError    = job?.status === "error";
   const canExtract = !uploading && !isRunning && file !== null;
   const canPromote = isDone && !dryRun && !promoteResult;
 

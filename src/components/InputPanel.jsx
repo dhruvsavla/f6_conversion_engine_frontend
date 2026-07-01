@@ -24,6 +24,7 @@ function isHexBuffer(buffer) {
 
 function decodeHexPreview(buffer) {
   const text = new TextDecoder("iso-8859-1").decode(buffer);
+  // eslint-disable-next-line no-control-regex
   return text.replace(/\x1e/g, "\n").replace(/\x1c/g, "|").replace(/\x1d/g, "=");
 }
 
